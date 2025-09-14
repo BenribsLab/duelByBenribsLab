@@ -19,6 +19,9 @@ COPY . .
 # Generate Prisma client as root
 RUN npx prisma generate
 
+# Initialize database (create tables if they don't exist)
+RUN npx prisma db push
+
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
