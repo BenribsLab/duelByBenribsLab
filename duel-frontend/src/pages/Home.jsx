@@ -21,7 +21,7 @@ const Home = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Swords className="h-8 w-8 text-purple-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">DuelArena</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">Duel By Benribs Lab</span>
             </div>
             <div className="flex space-x-4">
               <Link
@@ -53,7 +53,7 @@ const Home = () => {
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
               Défiez vos adversaires, grimpez dans les classements et devenez le champion ultime. 
-              Un système de points équitable qui récompense la participation autant que la performance.
+              Un système de points équitable qui récompense la participation et la performance.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -94,7 +94,7 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">1. Créez votre profil</h3>
               <p className="text-gray-600">
-                Inscrivez-vous et choisissez votre catégorie (Junior ou Senior)
+                Inscrivez-vous et choisissez votre catégorie (Junior ou Adulte)
               </p>
             </div>
 
@@ -105,7 +105,7 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">2. Lancez des défis</h3>
               <p className="text-gray-600">
-                Proposez des duels à d'autres participants ou acceptez leurs invitations
+                Proposez des duels à la salle ou acceptez leurs invitations
               </p>
             </div>
 
@@ -142,7 +142,7 @@ const Home = () => {
               Système de points équitable
             </h2>
             <p className="text-xl text-purple-100">
-              Nous récompensons à la fois la performance et la participation
+              Le système récompense à la fois la performance et la participation
             </p>
           </div>
 
@@ -175,7 +175,7 @@ const Home = () => {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">Indice de touches</h3>
-                    <p className="text-purple-100">Différentiel pour départager les égalités</p>
+                    <p className="text-purple-100">L'indice pour départager les égalités</p>
                   </div>
                 </div>
               </div>
@@ -186,15 +186,15 @@ const Home = () => {
               <ul className="space-y-3">
                 <li className="flex items-start space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-300 mt-1 flex-shrink-0" />
-                  <span>Encourage tous les participants à jouer régulièrement</span>
+                  <span>Dynamiser les relations entre les adhérents</span>
                 </li>
                 <li className="flex items-start space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-300 mt-1 flex-shrink-0" />
-                  <span>Valorise l'apprentissage autant que la victoire</span>
+                  <span>Système de compétitions locales</span>
                 </li>
                 <li className="flex items-start space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-300 mt-1 flex-shrink-0" />
-                  <span>Classements séparés Junior et Senior pour plus d'équité</span>
+                  <span>Classements séparés Enfants et Adultes pour plus d'équité</span>
                 </li>
                 <li className="flex items-start space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-300 mt-1 flex-shrink-0" />
