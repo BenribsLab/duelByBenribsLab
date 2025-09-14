@@ -16,6 +16,9 @@ RUN npm ci --only=production
 # Copy the rest of the application code
 COPY . .
 
+# Make entrypoint script executable
+RUN chmod +x entrypoint.sh
+
 # Generate Prisma client as root
 RUN npx prisma generate
 
@@ -31,6 +34,9 @@ USER nodejs
 
 # Expose the port the app runs on
 EXPOSE 3000
+
+# Use entrypoint script
+ENTRYPOINT ["./entrypoint.sh"]
 
 # Command to run the application
 CMD ["npm", "start"]
