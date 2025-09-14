@@ -115,7 +115,7 @@ const AdminSystem = () => {
         port: '3306',
         database: 'duel',
         username: 'duel',
-        password: 'sbirneb91'
+        password: migrationForm.password // Utiliser le mot de passe saisi par l'utilisateur
       };
       
       console.log('🔧 Config MySQL:', mysqlConfig);
