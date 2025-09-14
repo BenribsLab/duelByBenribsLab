@@ -11,8 +11,8 @@ services:
       PORT: 3000
       DOCKER_ENV: "true"
       ALLOWED_ORIGINS: "https://duel.benribs.fr,https://api-duel.benribs.fr,http://localhost:5173,http://localhost:3003"
-      # Par défaut SQLite, MySQL externe via switch si besoin
-      DATABASE_URL: "file:./prisma/dev.db"
+      # MySQL externe
+      DATABASE_URL: "mysql://duel:Sbirneb91%@benribs.fr:3306/duel"
     ports:
       - "3003:3000"
     volumes:
