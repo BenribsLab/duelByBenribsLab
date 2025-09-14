@@ -10,11 +10,11 @@ services:
       NODE_ENV: production
       PORT: 3000
       DOCKER_ENV: "true"
-      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3003"
       # Par défaut SQLite, MySQL externe via switch si besoin
       DATABASE_URL: "file:./dev.db"
     ports:
-      - "3001:3000"
+      - "3003:3000"
     volumes:
       # Persiste la base SQLite et les fichiers de config avec les bonnes permissions
       - sqlite_data:/app/prisma

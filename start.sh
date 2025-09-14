@@ -30,7 +30,7 @@ docker-compose ps
 
 echo "✅ Application démarrée !"
 echo "🌐 Frontend disponible sur : http://localhost:5173"
-echo "🔌 API disponible sur : http://localhost:3001"
+echo "🔌 API disponible sur : http://localhost:3003"
 echo "🗄️  Base de données : SQLite (par défaut)"
 echo "🔄 Switch MySQL externe : via /admin dans l'interface"
 echo ""

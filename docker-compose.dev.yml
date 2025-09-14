@@ -11,10 +11,10 @@ services:
       NODE_ENV: development
       PORT: 3000
       DOCKER_ENV: "true"
-      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3003"
       DATABASE_URL: "file:./dev.db"
     ports:
-      - "3001:3000"
+      - "3003:3000"
     volumes:
       # Bind mount pour le développement
       - ./duel-api:/app

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Mail, Lock, User, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import config from '../config';
 
 const Register = () => {
   const [step, setStep] = useState(1); // 1: email access, 2: form, 3: OTP if needed
@@ -62,7 +63,7 @@ const Register = () => {
         }
       }
 
-      const response = await axios.post('http://localhost:3001/api/auth/register', registrationData);
+      const response = await axios.post(`${config.API_BASE_URL}/auth/register`, registrationData);
       
       if (response.data.success) {
         if (response.data.data && response.data.data.requiresOTP) {
@@ -88,7 +89,7 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/verify-otp', {
+      const response = await axios.post(`${config.API_BASE_URL}/auth/verify-otp`, {
         email: formData.email,
         otpCode: otpCode
       });

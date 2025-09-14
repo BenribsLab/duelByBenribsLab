@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Trash2, Edit, Plus, Shield, Mail, Key, AlertTriangle, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import config from '../config';
 import adminService from '../services/adminService';
 import adminAuthService from '../services/adminAuthService';
 
@@ -128,6 +130,17 @@ const Admin = () => {
         pseudo: userData.pseudo,
         email: userData.email || null,
         password: userData.password || undefined,
+        authMode: userData.authMode
+      });
+      
+      setShowEditModal(false);
+      setEditingUser(null);
+      loadUsers();
+      loadStats();
+    } catch (error) {
+      setError(error.message || 'Erreur lors de la sauvegarde');
+    }
+  };
 
   const handleDeleteUser = async (userId) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
@@ -135,7 +148,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3001/api/admin/users/${userId}`);
+      await axios.delete(`${config.API_BASE_URL}/admin/users/${userId}`);
       loadUsers();
       loadStats();
     } catch (error) {
@@ -151,7 +164,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete('http://localhost:3001/api/admin/users', {
+      await axios.delete(`${config.API_BASE_URL}/admin/users`, {
         data: { userIds: selectedUsers }
       });
       setSelectedUsers([]);

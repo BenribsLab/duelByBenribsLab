@@ -54,10 +54,10 @@ Write-Host "  npm run dev    (mode développement)" -ForegroundColor White
 Write-Host "  npm start      (mode production)" -ForegroundColor White
 Write-Host ""
 Write-Host "Endpoints disponibles :" -ForegroundColor Cyan
-Write-Host "  http://localhost:3001/health" -ForegroundColor White
-Write-Host "  http://localhost:3001/api/duellistes" -ForegroundColor White
-Write-Host "  http://localhost:3001/api/duels" -ForegroundColor White
-Write-Host "  http://localhost:3001/api/classement" -ForegroundColor White
+Write-Host "  http://localhost:3003/health" -ForegroundColor White
+Write-Host "  http://localhost:3003/api/duellistes" -ForegroundColor White
+Write-Host "  http://localhost:3003/api/duels" -ForegroundColor White
+Write-Host "  http://localhost:3003/api/classement" -ForegroundColor White
 Write-Host ""
 Write-Host "Interface de base de données :" -ForegroundColor Cyan
 Write-Host "  npm run db:studio" -ForegroundColor White

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Mail, Lock, User, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import config from '../config';
 
 const Login = () => {
   const [step, setStep] = useState(1); // 1: identifiant, 2: password ou OTP
@@ -31,7 +32,7 @@ const Login = () => {
       
       if (isEmail) {
         // Tentative d'envoi OTP pour l'email
-        const response = await axios.post('http://localhost:3001/api/auth/request-otp', {
+        const response = await axios.post(`${config.API_BASE_URL}/auth/request-otp`, {
           email: identifier
         });
         
@@ -108,7 +109,7 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/verify-otp', {
+      const response = await axios.post(`${config.API_BASE_URL}/auth/verify-otp`, {
         email: otpEmail,
         otpCode: otpCode
       });

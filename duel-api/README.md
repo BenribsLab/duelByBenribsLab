@@ -44,7 +44,7 @@ npm run dev
 npm start
 ```
 
-L'API sera accessible sur : http://localhost:3001
+L'API sera accessible sur : http://localhost:3003
 
 ## 📋 Scripts disponibles
 
@@ -105,7 +105,7 @@ npm run db:studio
 
 Toute la configuration se fait via les variables d'environnement dans `.env` :
 
-- `PORT` : Port du serveur (défaut: 3001)
+- `PORT` : Port du serveur (défaut: 3003)
 - `DATABASE_URL` : URL SQLite (défaut: file:./dev.db)
 - `JWT_SECRET` : Secret pour les tokens JWT
 - `ALLOWED_ORIGINS` : Domaines autorisés pour CORS
@@ -171,7 +171,7 @@ prisma/
 ### Variables d'environnement production
 ```bash
 NODE_ENV=production
-PORT=3001
+PORT=3003
 DATABASE_URL="file:/path/to/production/duel.db"
 JWT_SECRET="votre_secret_tres_securise"
 ALLOWED_ORIGINS="https://votre-site.com"

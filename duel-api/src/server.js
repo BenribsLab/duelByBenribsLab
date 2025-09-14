@@ -8,7 +8,7 @@ require('dotenv').config();
 const { testConnection } = require('./database');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3003;
 
 // Middleware de sécurité
 app.use(helmet());

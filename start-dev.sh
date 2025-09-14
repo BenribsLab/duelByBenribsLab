@@ -30,7 +30,7 @@ docker-compose -f docker-compose.dev.yml ps
 
 echo "✅ Application de développement démarrée !"
 echo "🌐 Frontend disponible sur : http://localhost:5173"
-echo "🔌 API disponible sur : http://localhost:3001"
+echo "🔌 API disponible sur : http://localhost:3003"
 echo "🗄️  Base de données : SQLite (développement)"
 echo ""
 echo "📋 Commandes utiles :"

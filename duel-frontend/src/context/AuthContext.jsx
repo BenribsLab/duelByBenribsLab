@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import config from '../config';
 
 const AuthContext = createContext();
 
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }) => {
     if (!token) return false;
 
     try {
-      const response = await axios.get('http://localhost:3001/api/auth/me');
+      const response = await axios.get(`${config.API_BASE_URL}/auth/me`);
       return response.data.success;
     } catch (error) {
       console.error('Token invalide:', error);
