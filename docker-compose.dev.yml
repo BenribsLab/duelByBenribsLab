@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Version de développement - SQLite uniquement
 services:
   # API Backend
