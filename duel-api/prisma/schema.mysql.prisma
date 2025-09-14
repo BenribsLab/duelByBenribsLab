@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Dueliste {
+  id              Int               @id @default(autoincrement())
+  pseudo          String            @unique
+  avatarUrl       String?
+  dateInscription DateTime          @default(now())
+  statut          String            @default("ACTIF")
+  email           String?           @unique
+  passwordHash    String?
+  authMode        String            @default("PASSWORD")
+  emailVerified   Boolean           @default(false)
+  otpCode         String?
+  otpExpiry       DateTime?
+  nbVictoires     Int               @default(0)
+  nbDefaites      Int               @default(0)
+  nbMatchsTotal   Int               @default(0)
+  indiceTouches   Int               @default(0)
+  categorie       String            @default("SENIOR")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  duelsArbires    Duel[]            @relation("DuelsArbires")
+  duelsRecus      Duel[]            @relation("DuelsRecus")
+  duelsProvoques  Duel[]            @relation("DuelsProvoques")
+  validations     ValidationScore[]
+
+  @@map("duellistes")
+}
+
+model Duel {
+  id                   Int               @id @default(autoincrement())
+  provocateurId        Int
+  adversaireId         Int
+  arbitreId            Int?
+  etat                 String            @default("PROPOSE")
+  dateProposition      DateTime          @default(now())
+  dateAcceptation      DateTime?
+  dateProgrammee       DateTime?
+  dateValidation       DateTime?
+  scoreProvocateur     Int?
+  scoreAdversaire      Int?
+  vainqueurId          Int?
+  valideParProvocateur Boolean           @default(false)
+  valideParAdversaire  Boolean           @default(false)
+  valideParArbitre     Boolean           @default(false)
+  notes                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  arbitre              Dueliste?         @relation("DuelsArbires", fields: [arbitreId], references: [id])
+  adversaire           Dueliste          @relation("DuelsRecus", fields: [adversaireId], references: [id], onDelete: Cascade)
+  provocateur          Dueliste          @relation("DuelsProvoques", fields: [provocateurId], references: [id], onDelete: Cascade)
+  validations          ValidationScore[]
+
+  @@map("duels")
+}
+
+model ValidationScore {
+  id               Int      @id @default(autoincrement())
+  matchId          Int
+  duelisteId       Int
+  scoreProvocateur Int
+  scoreAdversaire  Int
+  dateSaisie       DateTime @default(now())
+  dueliste         Dueliste @relation(fields: [duelisteId], references: [id], onDelete: Cascade)
+  match            Duel     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, duelisteId])
+  @@map("validations_scores")
+}

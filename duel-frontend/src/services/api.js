@@ -1,0 +1,84 @@
+import axios from 'axios';
+
+// Configuration de base pour l'API
+const API_BASE_URL = 'http://localhost:3001/api';
+
+// Instance axios configurée
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Services API
+export const duellistesService = {
+  getAll: () => api.get('/duellistes'),
+  getById: (id) => api.get(`/duellistes/${id}`),
+  create: (dueliste) => api.post('/duellistes', dueliste),
+  update: (id, dueliste) => api.put(`/duellistes/${id}`, dueliste),
+  delete: (id) => api.delete(`/duellistes/${id}`),
+};
+
+export const duelsService = {
+  getAll: () => api.get('/duels'),
+  getMyDuels: (userId) => api.get(`/duels?duelisteId=${userId}`),
+  getById: (id) => api.get(`/duels/${id}`),
+  create: (duel) => api.post('/duels', duel),
+  update: (id, duel) => api.put(`/duels/${id}`, duel),
+  delete: (id) => api.delete(`/duels/${id}`),
+  accept: (id, data) => api.put(`/duels/${id}/accepter`, data),
+  refuse: (id, data) => api.put(`/duels/${id}/refuser`, data),
+  validateScore: async (id, scoreData) => {
+    return api.put(`/duels/${id}/score`, scoreData);
+  },
+  getProposition: async (id, duelisteId) => {
+    return api.get(`/duels/${id}/proposition?duelisteId=${duelisteId}`);
+  },
+  acceptProposition: async (id, duelisteId) => {
+    return api.put(`/duels/${id}/accepter-proposition`, { duelisteId });
+  }
+};
+
+export const classementService = {
+  get: () => api.get('/classement'),
+  getJunior: () => api.get('/classement/junior'),
+};
+
+// Services d'administration
+export const adminService = {
+  // Authentification admin
+  login: (credentials) => api.post('/admin/auth/login', credentials),
+  
+  // Gestion des duels
+  duels: {
+    getAll: (params = {}) => {
+      const token = localStorage.getItem('adminToken');
+      return api.get('/admin/duels', {
+        params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    },
+    getStatistiques: () => {
+      const token = localStorage.getItem('adminToken');
+      return api.get('/admin/duels/statistiques', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    },
+    supprimer: (id, raison) => {
+      const token = localStorage.getItem('adminToken');
+      return api.delete(`/admin/duels/${id}`, {
+        data: { raison },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    },
+    forcerValidation: (id, scoreData) => {
+      const token = localStorage.getItem('adminToken');
+      return api.put(`/admin/duels/${id}/forcer-validation`, scoreData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    }
+  }
+};
+
+export default api;

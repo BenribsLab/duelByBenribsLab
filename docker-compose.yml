@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # API Backend
+  duel-api:
+    build:
+      context: ./duel-api
+      dockerfile: Dockerfile
+    container_name: duel-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DOCKER_ENV: "true"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      # Par défaut SQLite, MySQL externe via switch si besoin
+      DATABASE_URL: "file:./dev.db"
+    ports:
+      - "3001:3000"
+    volumes:
+      # Persiste la base SQLite et les fichiers de config avec les bonnes permissions
+      - sqlite_data:/app/prisma
+      - api_data:/app/data
+    networks:
+      - duel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend React
+  duel-frontend:
+    build:
+      context: ./duel-frontend
+      dockerfile: Dockerfile
+    container_name: duel-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - duel-api
+    networks:
+      - duel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  sqlite_data:
+    driver: local
+  api_data:
+    driver: local
+
+networks:
+  duel-network:
+    driver: bridge
