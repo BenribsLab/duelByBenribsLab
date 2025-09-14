@@ -29,24 +29,24 @@ const prisma = new PrismaClient({
   errorFormat: 'pretty'
 });
 
-// Middleware pour la gestion des erreurs de connexion
-prisma.$use(async (params, next) => {
-  const before = Date.now();
-  
-  try {
-    const result = await next(params);
-    const after = Date.now();
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔍 Query ${params.model}.${params.action} took ${after - before}ms`);
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('❌ Erreur Prisma:', error);
-    throw error;
-  }
-});
+// Middleware pour la gestion des erreurs de connexion - DEPRECATED in Prisma 5.x
+// prisma.$use(async (params, next) => {
+//   const before = Date.now();
+//   
+//   try {
+//     const result = await next(params);
+//     const after = Date.now();
+//     
+//     if (process.env.NODE_ENV === 'development') {
+//       console.log(`🔍 Query ${params.model}.${params.action} took ${after - before}ms`);
+//     }
+//     
+//     return result;
+//   } catch (error) {
+//     console.error('❌ Erreur Prisma:', error);
+//     throw error;
+//   }
+// });
 
 // Fonction de test de connexion
 async function testConnection() {
