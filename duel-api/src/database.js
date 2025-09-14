@@ -51,6 +51,11 @@ prisma.$use(async (params, next) => {
 // Fonction de test de connexion
 async function testConnection() {
   try {
+    // Initialiser la base de données (créer les tables si elles n'existent pas)
+    const { execSync } = require('child_process');
+    console.log('🔧 Initialisation de la base de données...');
+    execSync('npx prisma db push', { stdio: 'inherit' });
+    
     await prisma.$connect();
     console.log('✅ Connexion à la base de données SQLite établie');
     return true;
