@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const validation = require('../middleware/validation');
 const { authenticateAdmin } = require('../middleware/adminAuth');
+const { localhostOnly } = require('../middleware/localhostOnly');
 const databaseConfigService = require('../services/databaseConfigService');
 
 const router = express.Router();
@@ -12,18 +13,32 @@ router.use(authenticateAdmin);
 /**
  * GET /api/admin/database/config
  * Obtenir la configuration actuelle de la base de données
+ * Accès restreint à localhost uniquement pour des raisons de sécurité
  */
-router.get('/config', async (req, res) => {
+router.get('/config', localhostOnly, async (req, res) => {
   try {
     const config = databaseConfigService.getCurrentConfig();
     
-    // Ne pas exposer les mots de passe
-    const safeConfig = { ...config };
-    delete safeConfig.password;
+    // Pour localhost, inclure les variables d'environnement MySQL pour permettre les tests
+    const responseData = { ...config };
+    
+    // Ne pas exposer le password de la config actuelle, mais inclure les variables MySQL d'environnement
+    delete responseData.password;
+    
+    // Ajouter les variables d'environnement MySQL pour les tests (localhost uniquement)
+    if (process.env.DB_HOST || process.env.DB_USER || process.env.DB_PASS) {
+      responseData.mysqlEnv = {
+        host: process.env.DB_HOST || 'benribs.fr',
+        port: process.env.DB_PORT || '3306',
+        database: process.env.DB_NAME || 'duel',
+        username: process.env.DB_USER || 'duel',
+        password: process.env.DB_PASS || ''
+      };
+    }
     
     res.json({
       success: true,
-      data: safeConfig
+      data: responseData
     });
   } catch (error) {
     console.error('Erreur lors de la récupération de la config DB:', error);

@@ -83,7 +83,7 @@ const Duellistes = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Duellistes</h1>
-        <p className="text-gray-600">Tous les membres du club d'escrime</p>
+        <p className="text-gray-600">Tous les membres inscrits</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

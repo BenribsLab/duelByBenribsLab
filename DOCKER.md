@@ -57,7 +57,7 @@ MYSQL_HOST=mysql
 MYSQL_PORT=3306
 MYSQL_DATABASE=duel_db
 MYSQL_USER=duel_user
-MYSQL_PASSWORD=duel_password
+MYSQL_PASSWORD=your_mysql_password_here
 ```
 
 ## 🛠️ Commandes utiles

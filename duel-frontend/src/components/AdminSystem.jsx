@@ -95,61 +95,42 @@ const AdminSystem = () => {
 
   // Vérifier si MySQL est disponible
   const checkMysqlAvailability = async () => {
-    console.log('🔍 Vérification MySQL availability...');
-    console.log('📋 currentConfig:', currentConfig);
-    
     try {
       // Si déjà sur MySQL, on considère que c'est disponible
       if (currentConfig?.provider === 'mysql') {
-        console.log('✅ Déjà sur MySQL, mysqlAvailable = true');
         setMysqlAvailable(true);
         return;
       }
       
-      console.log('🔍 Test connexion MySQL...');
+      // Récupérer la configuration MySQL depuis l'API backend
+      const mysqlEnvConfig = await databaseService.getCurrentConfig();
       
-      // Utiliser les paramètres MySQL depuis le .env (pas currentConfig qui est SQLite)
       const mysqlConfig = {
         provider: 'mysql',
-        host: 'benribs.fr',        // Paramètres fixes depuis .env
-        port: '3306',
-        database: 'duel',
-        username: 'duel',
-        password: migrationForm.password // Utiliser le mot de passe saisi par l'utilisateur
+        host: mysqlEnvConfig.data?.mysqlEnv?.host || mysqlEnvConfig.data?.host || 'benribs.fr',
+        port: mysqlEnvConfig.data?.mysqlEnv?.port || mysqlEnvConfig.data?.port || '3306',
+        database: mysqlEnvConfig.data?.mysqlEnv?.database || mysqlEnvConfig.data?.database || 'duel',
+        username: mysqlEnvConfig.data?.mysqlEnv?.username || mysqlEnvConfig.data?.username || 'duel',
+        password: mysqlEnvConfig.data?.mysqlEnv?.password || migrationForm.password || '' // Utiliser le password d'env ou saisi
       };
-      
-      console.log('🔧 Config MySQL:', mysqlConfig);
       
       // Test de connexion
       const connectionResponse = await databaseService.testConnection(mysqlConfig);
-      console.log('📡 Connexion response:', connectionResponse);
       
       if (!connectionResponse.success) {
-        console.log('❌ Connexion MySQL échouée');
         setMysqlAvailable(false);
         return;
       }
       
       // Vérifier les tables
-      console.log('🔍 Test tables MySQL...');
       const tablesResponse = await databaseService.checkTablesExist(mysqlConfig);
-      console.log('📊 Tables response:', tablesResponse);
-      console.log('📊 Tables data:', tablesResponse.data);
-      console.log('📊 Existing tables:', tablesResponse.data?.existingTables);
-      console.log('📊 Existing tables length:', tablesResponse.data?.existingTables?.length);
       
       if (tablesResponse.success && tablesResponse.data?.existingTables?.length > 0) {
-        console.log('✅ Tables MySQL trouvées, mysqlAvailable = true');
         setMysqlAvailable(true);
       } else {
-        console.log('❌ Aucune table MySQL trouvée');
-        console.log('   - success:', tablesResponse.success);
-        console.log('   - existingTables exists:', !!tablesResponse.data?.existingTables);
-        console.log('   - existingTables length:', tablesResponse.data?.existingTables?.length);
         setMysqlAvailable(false);
       }
     } catch (error) {
-      console.log('💥 Erreur MySQL check:', error);
       setMysqlAvailable(false);
     }
   };
@@ -216,9 +197,7 @@ const AdminSystem = () => {
     setConnectionTest({ status: 'testing', message: 'Test de connexion en cours...' });
     
     try {
-      console.log('🔍 Test de connexion avec config:', migrationForm);
       const response = await databaseService.testConnection(migrationForm);
-      console.log('📡 Réponse du test:', response);
       
       if (response.success) {
         setConnectionTest({ 
@@ -973,11 +952,6 @@ const AdminSystem = () => {
       {/* Section Switch Base de Données */}
       {(() => {
         const shouldShow = (currentConfig?.provider === 'mysql' || mysqlAvailable);
-        console.log('🎛️ Switch condition:', {
-          provider: currentConfig?.provider,
-          mysqlAvailable,
-          shouldShow
-        });
         return shouldShow;
       })() && (
         <div className="bg-white shadow rounded-lg p-6">

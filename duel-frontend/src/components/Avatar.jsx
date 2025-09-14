@@ -20,7 +20,8 @@ const Avatar = ({
   // Fonction pour obtenir les initiales
   const getInitials = (name) => {
     if (!name) return 'U';
-    return name.charAt(0).toUpperCase();
+    // Prendre les 2 premières lettres pour avoir plus d'info
+    return name.slice(0, 2).toUpperCase();
   };
 
   // En cas d'erreur de chargement d'image
