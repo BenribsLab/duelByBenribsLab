@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
-import { duellistesService } from '../services/api';
+import { duellistesService, uploadService } from '../services/api';
 
 const Parametres = () => {
   const { user, updateUser } = useContext(AuthContext);
@@ -25,7 +25,16 @@ const Parametres = () => {
       };
       setFormData(userData);
       setInitialData(userData);
-      setAvatarPreview(user.avatarUrl || null);
+      
+      // Construire l'URL complète pour l'avatar si nécessaire
+      if (user.avatarUrl) {
+        const fullAvatarUrl = user.avatarUrl.startsWith('http') 
+          ? user.avatarUrl 
+          : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3003'}${user.avatarUrl}`;
+        setAvatarPreview(fullAvatarUrl);
+      } else {
+        setAvatarPreview(null);
+      }
     }
   }, [user]);
 
@@ -42,16 +51,6 @@ const Parametres = () => {
     return formData.pseudo !== initialData.pseudo || 
            formData.categorie !== initialData.categorie ||
            formData.avatarUrl !== initialData.avatarUrl;
-  };
-
-  // Fonction pour convertir un fichier en base64
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
   };
 
   // Fonction pour gérer l'upload d'avatar
@@ -75,32 +74,66 @@ const Parametres = () => {
       setUploadingAvatar(true);
       setMessage({ type: '', content: '' });
 
-      // Convertir en base64
-      const base64 = await fileToBase64(file);
+      // Uploader le fichier au serveur
+      const response = await uploadService.uploadAvatar(file);
       
-      // Mettre à jour le preview et les données du formulaire
-      setAvatarPreview(base64);
-      setFormData(prev => ({
-        ...prev,
-        avatarUrl: base64
-      }));
+      if (response.data.success) {
+        const avatarUrl = response.data.data.avatarUrl;
+        
+        // Mettre à jour le preview et les données du formulaire
+        setAvatarPreview(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3003'}${avatarUrl}`);
+        setFormData(prev => ({
+          ...prev,
+          avatarUrl: avatarUrl
+        }));
+
+        setMessage({ type: 'success', content: 'Avatar uploadé avec succès !' });
+      }
 
     } catch (error) {
       console.error('Erreur lors de l\'upload:', error);
-      setMessage({ type: 'error', content: 'Erreur lors du traitement de l\'image.' });
+      
+      let errorMessage = 'Erreur lors de l\'upload de l\'image.';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      setMessage({ type: 'error', content: errorMessage });
     } finally {
       setUploadingAvatar(false);
     }
   };
 
   // Fonction pour supprimer l'avatar
-  const handleRemoveAvatar = () => {
-    setAvatarPreview(null);
-    setFormData(prev => ({
-      ...prev,
-      avatarUrl: ''
-    }));
-    setMessage({ type: '', content: '' });
+  const handleRemoveAvatar = async () => {
+    try {
+      setUploadingAvatar(true);
+      setMessage({ type: '', content: '' });
+
+      // Supprimer l'avatar du serveur
+      await uploadService.deleteAvatar();
+      
+      // Mettre à jour l'interface
+      setAvatarPreview(null);
+      setFormData(prev => ({
+        ...prev,
+        avatarUrl: ''
+      }));
+
+      setMessage({ type: 'success', content: 'Avatar supprimé avec succès !' });
+
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      
+      let errorMessage = 'Erreur lors de la suppression de l\'avatar.';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      setMessage({ type: 'error', content: errorMessage });
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -115,11 +148,18 @@ const Parametres = () => {
     setMessage({ type: '', content: '' });
 
     try {
-      const response = await duellistesService.update(user.id, formData);
+      // Envoyer seulement pseudo et categorie, pas avatarUrl (géré séparément)
+      const updateData = {
+        pseudo: formData.pseudo,
+        categorie: formData.categorie
+      };
+      
+      const response = await duellistesService.update(user.id, updateData);
       
       if (response.data.success) {
-        // Mettre à jour le contexte utilisateur
-        updateUser({ ...user, ...formData });
+        // Mettre à jour le contexte utilisateur avec les nouvelles données
+        const updatedUser = { ...user, ...updateData, avatarUrl: formData.avatarUrl };
+        updateUser(updatedUser);
         setInitialData(formData);
         setMessage({ 
           type: 'success', 

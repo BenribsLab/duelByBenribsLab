@@ -79,4 +79,21 @@ export const adminService = {
   }
 };
 
+// Service d'upload
+export const uploadService = {
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    return api.post('/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  deleteAvatar: () => {
+    return api.delete('/upload/avatar');
+  }
+};
+
 export default api;

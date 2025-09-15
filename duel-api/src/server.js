@@ -22,6 +22,10 @@ app.use(cors({
   credentials: true
 }));
 
+// Servir les fichiers statiques (uploads)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Rate limiting (exclure les routes admin)
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -88,6 +92,7 @@ app.use('/api/admin/database', require('./routes/adminDatabase'));
 app.use('/api/duellistes', require('./routes/duellistes'));
 app.use('/api/duels', require('./routes/duels'));
 app.use('/api/classement', require('./routes/classement'));
+app.use('/api/upload', require('./routes/upload'));
 
 // Middleware de gestion d'erreurs
 app.use((err, req, res, _next) => {
