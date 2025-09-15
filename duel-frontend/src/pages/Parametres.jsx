@@ -30,7 +30,7 @@ const Parametres = () => {
       if (user.avatarUrl) {
         const fullAvatarUrl = user.avatarUrl.startsWith('http') 
           ? user.avatarUrl 
-          : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3003'}${user.avatarUrl}`;
+          : `${import.meta.env.VITE_API_BASE_URL || 'https://benribs.fr:3003'}${user.avatarUrl}`;
         setAvatarPreview(fullAvatarUrl);
       } else {
         setAvatarPreview(null);
@@ -81,7 +81,7 @@ const Parametres = () => {
         const avatarUrl = response.data.data.avatarUrl;
         
         // Mettre à jour le preview et les données du formulaire
-        setAvatarPreview(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3003'}${avatarUrl}`);
+        setAvatarPreview(`${import.meta.env.VITE_API_BASE_URL || 'https://benribs.fr:3003'}${avatarUrl}`);
         setFormData(prev => ({
           ...prev,
           avatarUrl: avatarUrl

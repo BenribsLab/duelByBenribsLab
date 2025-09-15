@@ -1,7 +1,7 @@
 // Configuration de l'application
 const config = {
   // URL de l'API backend
-  API_BASE_URL: 'http://benribs.fr:3003/api',
+  API_BASE_URL: 'https://api-duel.benribs.fr/api',
   
   // Autres configurations globales peuvent être ajoutées ici
   APP_NAME: 'Duel Management System',
