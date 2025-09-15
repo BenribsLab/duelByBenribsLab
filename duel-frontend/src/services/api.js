@@ -85,14 +85,23 @@ export const uploadService = {
     const formData = new FormData();
     formData.append('avatar', file);
     
+    // Récupérer le token d'authentification
+    const token = localStorage.getItem('token');
+    
     return api.post('/upload/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${token}`,
       },
     });
   },
   deleteAvatar: () => {
-    return api.delete('/upload/avatar');
+    const token = localStorage.getItem('token');
+    return api.delete('/upload/avatar', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
   }
 };
 
