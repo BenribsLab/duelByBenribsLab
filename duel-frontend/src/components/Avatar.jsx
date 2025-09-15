@@ -17,6 +17,15 @@ const Avatar = ({
 
   const sizeClass = sizes[size] || sizes.md;
 
+  // Construire l'URL complète pour l'avatar si nécessaire
+  const getAvatarUrl = (avatarSrc) => {
+    if (!avatarSrc) return null;
+    if (avatarSrc.startsWith('http')) return avatarSrc;
+    return `https://api-duel.benribs.fr${avatarSrc}`;
+  };
+
+  const avatarUrl = getAvatarUrl(src);
+
   // Fonction pour obtenir les initiales
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -32,10 +41,10 @@ const Avatar = ({
 
   return (
     <div className={`relative ${className}`}>
-      {src ? (
+      {avatarUrl ? (
         <>
           <img
-            src={src}
+            src={avatarUrl}
             alt={alt || pseudo}
             className={`${sizeClass} rounded-full object-cover border border-gray-300`}
             onError={handleImageError}
