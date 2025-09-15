@@ -25,9 +25,14 @@ app.use(cors({
   credentials: true
 }));
 
-// Servir les fichiers statiques (uploads)
+// Servir les fichiers statiques (uploads) avec headers CORS
 const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', (req, res, next) => {
+  // Ajouter les headers CORS pour les fichiers statiques
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Rate limiting (exclure les routes admin)
 const limiter = rateLimit({
