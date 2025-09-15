@@ -10,6 +10,9 @@ const { testConnection } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3003;
 
+// Configuration trust proxy pour Docker/reverse proxy
+app.set('trust proxy', 1);
+
 // Middleware de sécurité
 app.use(helmet());
 
