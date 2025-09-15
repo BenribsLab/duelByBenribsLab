@@ -85,6 +85,7 @@ class DuelByBenribsLab {
         require_once DUEL_PLUGIN_PATH . 'includes/shortcodes/login.php';
         require_once DUEL_PLUGIN_PATH . 'includes/shortcodes/register.php';
         require_once DUEL_PLUGIN_PATH . 'includes/shortcodes/profile.php';
+        require_once DUEL_PLUGIN_PATH . 'includes/shortcodes/home.php';
         require_once DUEL_PLUGIN_PATH . 'includes/shortcodes/classement.php';
         require_once DUEL_PLUGIN_PATH . 'includes/shortcodes/duels.php';
     }
@@ -109,6 +110,7 @@ class DuelByBenribsLab {
         add_shortcode('duel_login', array('Duel_Login_Shortcode', 'render'));
         add_shortcode('duel_register', array('Duel_Register_Shortcode', 'render'));
         add_shortcode('duel_profile', array('Duel_Profile_Shortcode', 'render'));
+        add_shortcode('duel_home', array('Duel_Home_Shortcode', 'render'));
         // Le shortcode classement est enregistré dans son propre fichier
     }
     

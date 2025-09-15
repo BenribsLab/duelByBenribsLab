@@ -76,12 +76,21 @@ function duel_classement_shortcode($atts) {
                         
                         <div class="duel-avatar-cell">
                             <?php 
-                            $avatar_data = isset($dueliste['avatarUrl']) ? $dueliste['avatarUrl'] : null;
+                            $avatar_url = isset($dueliste['avatarUrl']) ? $dueliste['avatarUrl'] : null;
                             $pseudo = isset($dueliste['pseudo']) ? $dueliste['pseudo'] : 'Dueliste';
                             $initiales = strtoupper(substr($pseudo, 0, 2));
+                            
+                            // Si avatarUrl est un chemin relatif, construire l'URL complète
+                            if (!empty($avatar_url)) {
+                                if (strpos($avatar_url, '/') === 0) {
+                                    $avatar_url = 'https://api-duel.benribs.fr' . $avatar_url;
+                                }
+                            }
+                            
+                            $has_valid_avatar = !empty($avatar_url);
                             ?>
-                            <?php if (!empty($avatar_data)): ?>
-                                <img src="<?php echo esc_attr($avatar_data); ?>" 
+                            <?php if ($has_valid_avatar): ?>
+                                <img src="<?php echo esc_url($avatar_url); ?>" 
                                      alt="Avatar de <?php echo esc_attr($pseudo); ?>"
                                      class="duel-classement-avatar"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

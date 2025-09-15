@@ -43,7 +43,7 @@ class Duel_Login_Shortcode {
                 <div class="duel-error">
                     <?php echo esc_html($form_data['error']); ?>
                     <?php if (isset($form_data['suggest_register']) && $form_data['suggest_register'] && $atts['show_register_link'] === 'true'): ?>
-                        <p><a href="#" class="duel-register-link">Créer un compte</a></p>
+                        <p><a href="https://escrime-cey.fr/inscription-duel-by-benribs-lab/">Créer un compte</a></p>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -69,6 +69,17 @@ class Duel_Login_Shortcode {
             $('.duel-back-button').on('click', function(e) {
                 e.preventDefault();
                 location.reload();
+            });
+            
+            // Gestion spécifique des liens d'inscription pour contourner l'interception
+            $('.duel-register-link').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // Navigation directe
+                window.location.href = $(this).attr('href');
+                return false;
             });
         });
         </script>
@@ -158,7 +169,7 @@ class Duel_Login_Shortcode {
             <?php if ($atts['show_register_link'] === 'true'): ?>
                 <p class="duel-register-link-container">
                     Pas encore de compte ? 
-                    <a href="#" class="duel-register-link">Créer un compte</a>
+                    <a href="https://escrime-cey.fr/inscription-duel-by-benribs-lab/" class="duel-register-link">Créer un compte</a>
                 </p>
             <?php endif; ?>
         </div>

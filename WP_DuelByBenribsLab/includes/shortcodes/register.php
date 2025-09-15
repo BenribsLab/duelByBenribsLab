@@ -16,6 +16,11 @@ class Duel_Register_Shortcode {
      * @return string HTML du formulaire d'inscription
      */
     public static function render($atts = array()) {
+        // Démarrer la session si ce n'est pas déjà fait
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+        
         // Attributs par défaut
         $atts = shortcode_atts(array(
             'redirect_after_register' => '',
@@ -28,7 +33,12 @@ class Duel_Register_Shortcode {
         
         // Si déjà connecté, rediriger ou afficher un message
         if ($auth->is_logged_in()) {
-            return '<div class="duel-register-container"><p>Vous êtes déjà connecté !</p></div>';
+            return '<div class="duel-register-container"><div class="duel-success">✅ Vous êtes connecté avec succès !</div></div>';
+        }
+        
+        // Vérifier si on vient d'une inscription réussie
+        if (isset($_GET['registered']) && $_GET['registered'] == '1') {
+            return '<div class="duel-register-container"><div class="duel-success">✅ Inscription et connexion réussies ! Vous pouvez maintenant utiliser votre compte.</div></div>';
         }
         
         // Traitement des formulaires
@@ -48,7 +58,7 @@ class Duel_Register_Shortcode {
                 <div class="duel-success">
                     <?php echo esc_html($form_data['success_message']); ?>
                     <?php if ($atts['show_login_link'] === 'true'): ?>
-                        <p><a href="#" class="duel-login-link">Se connecter maintenant</a></p>
+                        <p><a href="https://escrime-cey.fr/connexion-duel-by-benribs-lab/" class="duel-login-link">Se connecter maintenant</a></p>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -150,7 +160,15 @@ class Duel_Register_Shortcode {
                     return array('error' => 'Le mot de passe doit contenir au moins 6 caractères');
                 }
                 
-                return $auth->register_with_password($pseudo, $password);
+                $result = $auth->register_with_password($pseudo, $password);
+                
+                // Si l'inscription est réussie, rediriger
+                if (isset($result['success']) && $result['success']) {
+                    wp_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
+                    exit;
+                }
+                
+                return $result;
                 
             case 'verify_register_otp':
                 $email = sanitize_email($_POST['email']);
@@ -160,7 +178,16 @@ class Duel_Register_Shortcode {
                     return array('error' => 'Email et code OTP requis');
                 }
                 
-                return $auth->verify_otp($email, $otp_code);
+                $result = $auth->verify_otp($email, $otp_code);
+                
+                // Si la connexion est réussie, on doit rediriger pour éviter les problèmes de nonce
+                if (isset($result['success']) && $result['success']) {
+                    // Nettoyer les données POST pour éviter la resoumission
+                    wp_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
+                    exit;
+                }
+                
+                return $result;
         }
         
         return array();
@@ -175,7 +202,7 @@ class Duel_Register_Shortcode {
         <div class="duel-register-form">
             <h3><?php echo esc_html($atts['title']); ?></h3>
             
-            <form method="post" action="">
+            <form method="post" action="" id="duel-register-step1">
                 <?php wp_nonce_field('duel_register_nonce', 'duel_nonce'); ?>
                 
                 <div class="duel-form-group">
@@ -191,23 +218,39 @@ class Duel_Register_Shortcode {
                     <h4>Avez-vous accès à vos emails à la salle d'escrime ?</h4>
                     <p class="duel-form-description">Cette information nous aide à choisir le meilleur mode d'authentification pour vous.</p>
                     
+                    <input type="hidden" name="duel_action" id="duel_action" value="">
+                    
                     <div class="duel-question-buttons">
-                        <button type="submit" name="duel_action" value="email_access_yes" 
+                        <button type="button" onclick="submitWithAction('email_access_yes')" 
                                 class="duel-btn duel-btn-primary">
                             ✉️ Oui, j'ai accès
                         </button>
-                        <button type="submit" name="duel_action" value="email_access_no" 
+                        <button type="button" onclick="submitWithAction('email_access_no')" 
                                 class="duel-btn duel-btn-secondary">
                             🔒 Non, pas d'accès
                         </button>
                     </div>
+                    
+                    <script>
+                    function submitWithAction(action) {
+                        const pseudoInput = document.getElementById('pseudo');
+                        if (!pseudoInput.value.trim()) {
+                            alert('Veuillez d\'abord saisir votre pseudo');
+                            pseudoInput.focus();
+                            return false;
+                        }
+                        
+                        document.getElementById('duel_action').value = action;
+                        document.getElementById('duel-register-step1').submit();
+                    }
+                    </script>
                 </div>
             </form>
             
             <?php if ($atts['show_login_link'] === 'true'): ?>
                 <p class="duel-login-link-container">
                     Déjà un compte ? 
-                    <a href="#" class="duel-login-link">Se connecter</a>
+                    <a href="https://escrime-cey.fr/connexion-duel-by-benribs-lab/" class="duel-login-link">Se connecter</a>
                 </p>
             <?php endif; ?>
         </div>

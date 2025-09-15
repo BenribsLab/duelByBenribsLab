@@ -49,6 +49,36 @@ class Duel_Profile_Shortcode {
             }
         }
         
+        // Gérer le changement de catégorie
+        $category_message = '';
+        if (isset($_POST['duel_action']) && $_POST['duel_action'] === 'update_category') {
+            if (wp_verify_nonce($_POST['duel_nonce'], 'duel_category_nonce')) {
+                $new_category = sanitize_text_field($_POST['categorie']);
+                
+                if (in_array($new_category, array('JUNIOR', 'SENIOR'))) {
+                    $api_client = new Duel_API_Client();
+                    $token = $auth->get_token();
+                    
+                    $result = $api_client->update_dueliste_categorie(
+                        $user_profile['id'], 
+                        $new_category, 
+                        $token
+                    );
+                    
+                    if (isset($result['success']) && $result['success']) {
+                        $category_message = '<div class="duel-success">Catégorie mise à jour avec succès !</div>';
+                        // Rafraîchir le profil
+                        $user_profile = $auth->get_current_user_profile();
+                    } else {
+                        $error_msg = isset($result['message']) ? $result['message'] : 'Erreur lors de la mise à jour';
+                        $category_message = '<div class="duel-error">' . esc_html($error_msg) . '</div>';
+                    }
+                } else {
+                    $category_message = '<div class="duel-error">Catégorie invalide</div>';
+                }
+            }
+        }
+        
         // Générer le HTML
         ob_start();
         ?>
@@ -62,10 +92,19 @@ class Duel_Profile_Shortcode {
                 <?php if ($atts['show_avatar'] === 'true'): ?>
                     <div class="duel-profile-avatar">
                         <?php 
-                        $avatar_data = $user_profile['avatarUrl'] ?? null;
+                        $avatar_url = $user_profile['avatarUrl'] ?? null;
+                        
+                        // Si avatarUrl est un chemin relatif, construire l'URL complète
+                        if (!empty($avatar_url)) {
+                            if (strpos($avatar_url, '/') === 0) {
+                                $avatar_url = 'https://api-duel.benribs.fr' . $avatar_url;
+                            }
+                        }
+                        
+                        $has_valid_avatar = !empty($avatar_url);
                         ?>
-                        <?php if (!empty($avatar_data) && $avatar_data !== null): ?>
-                            <img src="<?php echo esc_attr($avatar_data); ?>" 
+                        <?php if ($has_valid_avatar): ?>
+                            <img src="<?php echo esc_url($avatar_url); ?>" 
                                  alt="Avatar de <?php echo esc_attr($user_profile['pseudo']); ?>"
                                  class="duel-avatar-img"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -144,6 +183,44 @@ class Duel_Profile_Shortcode {
                         </div>
                     </div>
                 <?php endif; ?>
+                
+                <!-- Message de retour pour changement de catégorie -->
+                <?php if (!empty($category_message)): ?>
+                    <?php echo $category_message; ?>
+                <?php endif; ?>
+                
+                <!-- Formulaire de changement de catégorie -->
+                <div class="duel-profile-category-change">
+                    <h4>Modifier ma catégorie</h4>
+                    <form method="post" action="" class="duel-category-form">
+                        <?php wp_nonce_field('duel_category_nonce', 'duel_nonce'); ?>
+                        <input type="hidden" name="duel_action" value="update_category">
+                        
+                        <div class="duel-category-options">
+                            <label class="duel-category-option">
+                                <input type="radio" name="categorie" value="JUNIOR" 
+                                       <?php echo (isset($user_profile['categorie']) && $user_profile['categorie'] === 'JUNIOR') ? 'checked' : ''; ?>>
+                                <span class="duel-category-label">
+                                    <span class="duel-category-badge duel-category-junior">Junior</span>
+                                    <small>Moins de 15 ans</small>
+                                </span>
+                            </label>
+                            
+                            <label class="duel-category-option">
+                                <input type="radio" name="categorie" value="SENIOR" 
+                                       <?php echo (isset($user_profile['categorie']) && $user_profile['categorie'] === 'SENIOR') ? 'checked' : ''; ?>>
+                                <span class="duel-category-label">
+                                    <span class="duel-category-badge duel-category-senior">Adulte</span>
+                                    <small>15 ans et plus</small>
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="duel-btn duel-btn-primary duel-btn-small">
+                            Mettre à jour
+                        </button>
+                    </form>
+                </div>
                 
                 <?php if ($atts['show_logout'] === 'true'): ?>
                     <div class="duel-profile-actions">
@@ -246,6 +323,71 @@ class Duel_Profile_Shortcode {
             padding-top: 20px;
             border-top: 1px solid #e5e7eb;
         }
+        
+        /* Styles pour le formulaire de changement de catégorie */
+        .duel-profile-category-change {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .duel-profile-category-change h4 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            color: #1f2937;
+            font-weight: 600;
+        }
+        
+        .duel-category-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .duel-category-option {
+            flex: 1;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .duel-category-option input[type="radio"] {
+            display: none;
+        }
+        
+        .duel-category-label {
+            display: block;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .duel-category-option:hover .duel-category-label {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+        
+        .duel-category-option input[type="radio"]:checked + .duel-category-label {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .duel-category-label small {
+            display: block;
+            margin-top: 5px;
+            font-size: 11px;
+            color: #6b7280;
+        }
+        
+        .duel-btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
         </style>
         <?php
         return ob_get_clean();
@@ -264,7 +406,7 @@ class Duel_Profile_Shortcode {
                 </div>
                 <h3>Connexion requise</h3>
                 <p>Vous devez être connecté pour voir votre profil.</p>
-                <a href="#" class="duel-btn duel-btn-primary duel-login-link">
+                <a href="https://escrime-cey.fr/connexion-duel-by-benribs-lab/" class="duel-btn duel-btn-primary duel-login-link">
                     Se connecter
                 </a>
             </div>

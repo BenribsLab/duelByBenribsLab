@@ -33,6 +33,11 @@ class Duel_API_Client {
     public function make_request($endpoint, $data = array(), $method = 'GET', $token = null) {
         $url = rtrim($this->api_base_url, '/') . '/' . ltrim($endpoint, '/');
         
+        // Pour les requêtes GET, ajouter les paramètres en query string
+        if ($method === 'GET' && !empty($data)) {
+            $url .= '?' . http_build_query($data);
+        }
+        
         $args = array(
             'method' => $method,
             'headers' => array(
@@ -46,7 +51,7 @@ class Duel_API_Client {
             $args['headers']['Authorization'] = 'Bearer ' . $token;
         }
         
-        // Ajouter les données pour POST/PUT
+        // Ajouter les données pour POST/PUT/PATCH
         if (in_array($method, array('POST', 'PUT', 'PATCH')) && !empty($data)) {
             $args['body'] = json_encode($data);
         }
@@ -253,10 +258,48 @@ class Duel_API_Client {
     }
     
     /**
+     * Récupérer un duel par son ID
+     */
+    public function get_duel_by_id($duel_id, $token) {
+        $endpoint = 'duels/' . intval($duel_id);
+        return $this->make_request($endpoint, array(), 'GET', $token);
+    }
+    
+    /**
+     * Récupérer la proposition de score en cours
+     */
+    public function get_proposition_score($duel_id, $dueliste_id, $token) {
+        $endpoint = 'duels/' . intval($duel_id) . '/proposition';
+        return $this->make_request($endpoint, array('duelisteId' => intval($dueliste_id)), 'GET', $token);
+    }
+    
+    /**
+     * Accepter une proposition de score
+     */
+    public function accept_proposition_score($duel_id, $dueliste_id, $token) {
+        $endpoint = 'duels/' . intval($duel_id) . '/accepter-proposition';
+        return $this->make_request($endpoint, array('duelisteId' => $dueliste_id), 'PUT', $token);
+    }
+    
+    /**
      * Récupérer tous les duellistes (pour le formulaire nouveau duel)
      */
     public function get_all_duellistes($token) {
         return $this->make_request('duellistes', array(), 'GET', $token);
+    }
+    
+    /**
+     * Mettre à jour la catégorie d'un duelliste
+     * 
+     * @param int $dueliste_id ID du duelliste
+     * @param string $categorie Nouvelle catégorie (JUNIOR ou SENIOR)
+     * @param string $token Token d'authentification
+     * @return array Réponse de l'API
+     */
+    public function update_dueliste_categorie($dueliste_id, $categorie, $token) {
+        $endpoint = 'duellistes/' . intval($dueliste_id);
+        $data = array('categorie' => $categorie);
+        return $this->make_request($endpoint, $data, 'PUT', $token);
     }
     
     /**
