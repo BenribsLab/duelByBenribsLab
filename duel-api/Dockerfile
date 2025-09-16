@@ -26,7 +26,10 @@ RUN npx prisma generate
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 
-# Change ownership of EVERYTHING to nodejs user (including node_modules)
+# Create uploads directory structure with correct permissions
+RUN mkdir -p /app/uploads/avatars
+
+# Change ownership of EVERYTHING to nodejs user (including node_modules and uploads)
 RUN chown -R nodejs:nodejs /app
 
 # Switch to the nodejs user
