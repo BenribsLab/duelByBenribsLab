@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,30 @@ const prisma = new PrismaClient();
  */
 class AdminService {
   
+  /**
+   * Normaliser un email (trim + lowercase + gérer les points Gmail)
+   */
+  normalizeEmail(email) {
+    if (!email) return null;
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    // Pour Gmail, supprimer les points avant l'@
+    if (trimmedEmail.endsWith('@gmail.com')) {
+      const [localPart, domain] = trimmedEmail.split('@');
+      return localPart.replace(/\./g, '') + '@' + domain;
+    }
+    
+    return trimmedEmail;
+  }
+
+  /**
+   * Générer un code OTP
+   */
+  generateOTP() {
+    const length = parseInt(process.env.OTP_LENGTH) || 6;
+    return crypto.randomInt(100000, 999999).toString().padStart(length, '0');
+  }
+
   /**
    * Lister tous les utilisateurs avec pagination
    */
@@ -117,23 +142,28 @@ class AdminService {
         dataToUpdate.pseudo = pseudo;
       }
 
-      if (email !== undefined && email !== existingUser.email) {
-        if (email) {
-          // Vérifier que l'email n'est pas déjà utilisé
-          const emailExists = await prisma.dueliste.findFirst({
-            where: {
-              email,
-              id: { not: parseInt(userId) }
+      if (email !== undefined) {
+        // Normaliser l'email
+        const normalizedEmail = this.normalizeEmail(email);
+        
+        if (normalizedEmail !== existingUser.email) {
+          if (normalizedEmail) {
+            // Vérifier que l'email n'est pas déjà utilisé
+            const emailExists = await prisma.dueliste.findFirst({
+              where: {
+                email: normalizedEmail,
+                id: { not: parseInt(userId) }
+              }
+            });
+
+            if (emailExists) {
+              throw new Error('Cet email est déjà utilisé');
             }
-          });
-
-          if (emailExists) {
-            throw new Error('Cet email est déjà utilisé');
           }
-        }
 
-        dataToUpdate.email = email || null;
-        dataToUpdate.emailVerified = email ? false : true;
+          dataToUpdate.email = normalizedEmail;
+          dataToUpdate.emailVerified = normalizedEmail ? false : true;
+        }
       }
 
       if (password) {
@@ -240,17 +270,104 @@ class AdminService {
       ]);
 
       return {
-        total,
-        byAuthMode: {
-          password: passwordUsers,
-          otp: otpUsers
-        },
-        emailVerified: verifiedEmails,
-        emailNotVerified: total - verifiedEmails
+        totalUsers: total,
+        verifiedUsers: verifiedEmails,
+        passwordUsers: passwordUsers,
+        activeUsers: total, // Pour l'instant, on considère tous les utilisateurs comme actifs
+        otpUsers: otpUsers
       };
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques:', error);
       throw new Error('Impossible de récupérer les statistiques');
+    }
+  }
+
+  /**
+   * Créer un nouvel utilisateur (via l'interface admin)
+   */
+  async createUserByAdmin(userData) {
+    try {
+      const { pseudo, email, password, authMode, autoValidate = true } = userData;
+
+      // Normaliser l'email
+      const normalizedEmail = this.normalizeEmail(email);
+
+      // Validation des données
+      if (!pseudo) {
+        throw new Error('Le pseudo est requis');
+      }
+
+      if (!authMode || !['PASSWORD', 'OTP'].includes(authMode)) {
+        throw new Error('Mode d\'authentification invalide (PASSWORD ou OTP)');
+      }
+
+      if (authMode === 'PASSWORD' && !password) {
+        throw new Error('Le mot de passe est requis pour le mode PASSWORD');
+      }
+
+      if (authMode === 'OTP' && !normalizedEmail) {
+        throw new Error('L\'email est requis pour le mode OTP');
+      }
+
+      // Vérifier si le pseudo existe déjà
+      const existingUser = await prisma.dueliste.findUnique({
+        where: { pseudo }
+      });
+
+      if (existingUser) {
+        throw new Error('Ce pseudo est déjà utilisé');
+      }
+
+      // Vérifier si l'email existe déjà (si fourni)
+      if (normalizedEmail) {
+        const existingEmail = await prisma.dueliste.findUnique({
+          where: { email: normalizedEmail }
+        });
+
+        if (existingEmail) {
+          throw new Error('Cet email est déjà utilisé');
+        }
+      }
+
+      // Préparer les données utilisateur
+      const userData_creation = {
+        pseudo,
+        email: normalizedEmail,
+        authMode,
+        emailVerified: autoValidate || !normalizedEmail, // Auto-valider si demandé ou si pas d'email
+      };
+
+      // Hasher le mot de passe si mode PASSWORD
+      if (authMode === 'PASSWORD' && password) {
+        userData_creation.passwordHash = await bcrypt.hash(password, 12);
+      }
+
+      // Générer un OTP si mode OTP
+      if (authMode === 'OTP') {
+        const otpCode = this.generateOTP();
+        const otpExpiry = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000);
+        userData_creation.otpCode = otpCode;
+        userData_creation.otpExpiry = otpExpiry;
+      }
+
+      // Créer l'utilisateur
+      const user = await prisma.dueliste.create({
+        data: userData_creation,
+        select: {
+          id: true,
+          pseudo: true,
+          email: true,
+          authMode: true,
+          emailVerified: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      return user;
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'utilisateur:', error);
+      throw error;
     }
   }
 

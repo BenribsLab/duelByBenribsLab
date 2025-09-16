@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Swords, Calendar, Check, X, Trophy, AlertCircle, ChevronDown } from 'lucide-react';
+import { Swords, Calendar, Check, X, Trophy, AlertCircle } from 'lucide-react';
 import { duelsService, duellistesService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import ScoreModal from '../components/ScoreModal';
@@ -10,21 +10,25 @@ const Duels = () => {
   const [duels, setDuels] = useState([]);
   const [duellistes, setDuellistes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   
   // Définir l'onglet actif en fonction de la route et des paramètres URL
   const getInitialTab = () => {
     const urlParams = new URLSearchParams(location.search);
     const tabParam = urlParams.get('tab');
+    const adversaireParam = urlParams.get('adversaire');
+    
+    // Si un adversaire est spécifié dans l'URL, aller directement au formulaire de création
+    if (adversaireParam) {
+      return 'nouveau-duel';
+    }
     
     // Si un onglet est spécifié dans l'URL, l'utiliser
-    if (tabParam && ['invitations-recues', 'mes-defis', 'duels-actifs', 'duels-recents', 'nouveau-duel'].includes(tabParam)) {
+    if (tabParam && ['invitations-recues', 'mes-defis', 'duels-actifs', 'duels-recents'].includes(tabParam)) {
       return tabParam;
     }
     
-    // Sinon, utiliser la logique par défaut
-    return location.pathname === '/nouveau-duel' ? 'nouveau-duel' : 'invitations-recues';
+    // Par défaut, commencer par les invitations
+    return 'invitations-recues';
   };
   
   const [activeTab, setActiveTab] = useState(getInitialTab);
@@ -32,35 +36,10 @@ const Duels = () => {
   const [selectedDuel, setSelectedDuel] = useState(null);
   const { user } = useContext(AuthContext);
 
-  // Gérer le responsive
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    handleResize(); // Check initial size
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   // Mettre à jour l'onglet actif quand la route ou les paramètres changent
   useEffect(() => {
     setActiveTab(getInitialTab());
   }, [location.pathname, location.search]);
-
-  // Fermer le dropdown quand on clique en dehors
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownOpen && !event.target.closest('.relative')) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [dropdownOpen]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,20 +81,18 @@ const Duels = () => {
     };
   }, [user?.id]);
 
-  // Définition des onglets
+  // Définition des onglets (sans nouveau-duel)
   const tabs = [
     { id: 'invitations-recues', label: 'Invitations Reçues', count: duels.filter(d => d.etat === 'PROPOSE' && d.adversaire.id === user?.id).length },
     { id: 'mes-defis', label: 'Mes Défis', count: duels.filter(d => d.etat === 'PROPOSE' && d.provocateur.id === user?.id).length },
     { id: 'duels-actifs', label: 'Duels Actifs', count: duels.filter(d => d.etat === 'A_JOUER').length },
-    { id: 'duels-recents', label: 'Duels Récents', count: 0 },
-    { id: 'nouveau-duel', label: 'Nouveau Défi', count: 0 }
+    { id: 'duels-recents', label: 'Duels Récents', count: 0 }
   ];
 
   const currentTab = tabs.find(tab => tab.id === activeTab);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    setDropdownOpen(false);
   };
 
   const handleAcceptDuel = async (duelId) => {
@@ -222,6 +199,18 @@ const Duels = () => {
     );
   };
 
+  // Fonction pour obtenir le titre de la page
+  const getPageTitle = () => {
+    switch(activeTab) {
+      case 'invitations-recues': return 'Invitations Reçues';
+      case 'mes-defis': return 'Mes Défis';
+      case 'duels-actifs': return 'Duels Actifs';
+      case 'duels-recents': return 'Duels Récents';
+      case 'nouveau-duel': return 'Provoquer un Duel';
+      default: return 'Gestion des Duels';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -232,112 +221,74 @@ const Duels = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Gestion des Duels</h1>
-        <p className="text-gray-600 mt-1">Gérez vos défis et suivez vos combats</p>
+      {/* Header avec titre dynamique et bouton + */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {getPageTitle()}
+          </h1>
+          <p className="text-gray-600 mt-1">Gérez vos défis et suivez vos combats</p>
+        </div>
+        
+        {/* Bouton + flottant pour nouveau duel */}
+        <button
+          onClick={() => setActiveTab('nouveau-duel')}
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transition-colors"
+          aria-label="Nouveau duel"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
       </div>
 
-        {/* Onglets */}
-        <div className="border-b border-gray-200">
-          {/* Version Desktop */}
-          {!isMobile && (
-            <nav className="-mb-px flex space-x-8">
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                const getTabColor = () => {
-                  switch(tab.id) {
-                    case 'invitations-recues': return isActive ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-                    case 'mes-defis': return isActive ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-                    case 'duels-actifs': return isActive ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-                    case 'duels-recents': return isActive ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-                    case 'nouveau-duel': return isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-                    default: return 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-                  }
-                };
-                const getTabIcon = () => {
-                  switch(tab.id) {
-                    case 'invitations-recues': return <AlertCircle className="h-4 w-4 mr-2" />;
-                    case 'mes-defis': return <Swords className="h-4 w-4 mr-2" />;
-                    case 'duels-actifs': return <Trophy className="h-4 w-4 mr-2" />;
-                    case 'duels-recents': return <Check className="h-4 w-4 mr-2" />;
-                    case 'nouveau-duel': return <Calendar className="h-4 w-4 mr-2" />;
-                    default: return null;
-                  }
-                };
+      {/* Navigation par onglets - icônes uniquement */}
+      <div className="bg-white border-b border-gray-200">
+        <nav className="flex">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            
+            const getTabColor = () => {
+              if (isActive) {
+                switch(tab.id) {
+                  case 'invitations-recues': return 'border-blue-500 text-blue-600';
+                  case 'mes-defis': return 'border-red-500 text-red-600';
+                  case 'duels-actifs': return 'border-purple-500 text-purple-600';
+                  case 'duels-recents': return 'border-green-500 text-green-600';
+                  default: return 'border-gray-500 text-gray-600';
+                }
+              }
+              return 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+            };
 
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${getTabColor()}`}
-                  >
-                    {getTabIcon()}
-                    {tab.label}
-                    {tab.count > 0 && (
-                      <span className="ml-2 bg-red-100 text-red-600 text-xs rounded-full px-2 py-1 min-w-[20px] flex items-center justify-center">
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          )}
+            const getTabIcon = () => {
+              const iconClass = `h-6 w-6 ${isActive ? '' : 'text-gray-400'}`;
+              switch(tab.id) {
+                case 'invitations-recues': return <AlertCircle className={iconClass} />;
+                case 'mes-defis': return <Swords className={iconClass} />;
+                case 'duels-actifs': return <Trophy className={iconClass} />;
+                case 'duels-recents': return <Check className={iconClass} />;
+                default: return null;
+              }
+            };
 
-          {/* Version Mobile - Dropdown */}
-          {isMobile && (
-            <div className="relative">
+            return (
               <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full py-3 px-4 flex items-center justify-between bg-white border border-gray-300 rounded-md shadow-sm text-left"
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex-1 py-4 border-b-2 font-medium flex flex-col items-center justify-center relative ${getTabColor()}`}
               >
-                <div className="flex items-center">
-                  {currentTab?.id === 'invitations-recues' && <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />}
-                  {currentTab?.id === 'mes-defis' && <Swords className="h-4 w-4 mr-2 text-red-600" />}
-                  {currentTab?.id === 'duels-actifs' && <Trophy className="h-4 w-4 mr-2 text-purple-600" />}
-                  {currentTab?.id === 'duels-recents' && <Check className="h-4 w-4 mr-2 text-green-600" />}
-                  {currentTab?.id === 'nouveau-duel' && <Calendar className="h-4 w-4 mr-2 text-orange-600" />}
-                  <span className="font-medium">{currentTab?.label}</span>
-                  {currentTab?.count > 0 && (
-                    <span className="ml-2 bg-red-100 text-red-600 text-xs rounded-full px-2 py-1">
-                      {currentTab.count}
-                    </span>
-                  )}
-                </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${dropdownOpen ? 'transform rotate-180' : ''}`} />
+                {getTabIcon()}
+                {tab.count > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {tab.count}
+                  </span>
+                )}
               </button>
-
-              {dropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                  {tabs.map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabChange(tab.id)}
-                        className={`w-full px-4 py-3 text-left flex items-center hover:bg-gray-50 ${
-                          isActive ? 'bg-gray-50 font-medium' : ''
-                        }`}
-                      >
-                        {tab.id === 'invitations-recues' && <AlertCircle className="h-4 w-4 mr-3 text-blue-600" />}
-                        {tab.id === 'mes-defis' && <Swords className="h-4 w-4 mr-3 text-red-600" />}
-                        {tab.id === 'duels-actifs' && <Trophy className="h-4 w-4 mr-3 text-purple-600" />}
-                        {tab.id === 'duels-recents' && <Check className="h-4 w-4 mr-3 text-green-600" />}
-                        {tab.id === 'nouveau-duel' && <Calendar className="h-4 w-4 mr-3 text-orange-600" />}
-                        <span className="flex-1">{tab.label}</span>
-                        {tab.count > 0 && (
-                          <span className="bg-red-100 text-red-600 text-xs rounded-full px-2 py-1 ml-2">
-                            {tab.count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            );
+          })}
+        </nav>
+      </div>
 
         {/* Contenu des onglets */}
       {activeTab === 'invitations-recues' && (

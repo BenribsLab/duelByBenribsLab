@@ -31,6 +31,12 @@ export default {
           800: '#932f19',
           900: '#762817',
         }
+      },
+      spacing: {
+        'safe': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
       }
     },
   },

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "586179973861",
+    "project_id": "duelbybenribslab",
+    "storage_bucket": "duelbybenribslab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:586179973861:android:0b9af5fa688b4f9d163a0c",
+        "android_client_info": {
+          "package_name": "com.benribslab.duel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3YPe-e0nZ4RQdIiwOXmwK80N0HhdU2Tg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

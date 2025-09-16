@@ -187,31 +187,30 @@ async function proposerDuel(req, res) {
     const nouveauDuel = await prisma.duel.create({
       data,
       include: {
-        provocateur: { select: { id: true, pseudo: true, avatarUrl: true } },
-        adversaire: { select: { id: true, pseudo: true, avatarUrl: true } },
+        provocateur: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
         arbitre: { select: { id: true, pseudo: true, avatarUrl: true } }
       }
     });
 
-    // TODO: Réactiver les notifications push plus tard
     // Envoyer notification push à l'adversaire
-    // if (nouveauDuel.adversaire.pushToken) {
-    //   try {
-    //     const notification = pushNotificationService.createInvitationNotification(
-    //       nouveauDuel.provocateur,
-    //       nouveauDuel.adversaire
-    //     );
+    if (nouveauDuel.adversaire.pushToken) {
+      try {
+        const notification = pushNotificationService.createInvitationNotification(
+          nouveauDuel.provocateur,
+          nouveauDuel.adversaire
+        );
         
-    //     await pushNotificationService.sendNotification(
-    //       nouveauDuel.adversaire.pushToken,
-    //       notification,
-    //       notification.data
-    //     );
-    //   } catch (error) {
-    //     console.error('Erreur notification push invitation:', error);
-    //     // Ne pas faire échouer la création du duel pour une erreur de notification
-    //   }
-    // }
+        await pushNotificationService.sendNotification(
+          nouveauDuel.adversaire.pushToken,
+          notification,
+          notification.data
+        );
+      } catch (error) {
+        console.error('Erreur notification push invitation:', error);
+        // Ne pas faire échouer la création du duel pour une erreur de notification
+      }
+    }
     
     res.status(201).json({
       success: true,
@@ -277,30 +276,29 @@ async function accepterDuel(req, res) {
       where: { id: parseInt(id) },
       data: updateData,
       include: {
-        provocateur: { select: { id: true, pseudo: true, avatarUrl: true } },
-        adversaire: { select: { id: true, pseudo: true, avatarUrl: true } },
+        provocateur: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
         arbitre: { select: { id: true, pseudo: true, avatarUrl: true } }
       }
     });
 
-    // TODO: Réactiver les notifications push plus tard
     // Envoyer notification push au provocateur
-    // if (duelAccepte.provocateur.pushToken) {
-    //   try {
-    //     const notification = pushNotificationService.createAcceptedNotification(
-    //       duelAccepte.adversaire,
-    //       duelAccepte.provocateur
-    //     );
+    if (duelAccepte.provocateur.pushToken) {
+      try {
+        const notification = pushNotificationService.createAcceptedNotification(
+          duelAccepte.adversaire,
+          duelAccepte.provocateur
+        );
         
-    //     await pushNotificationService.sendNotification(
-    //       duelAccepte.provocateur.pushToken,
-    //       notification,
-    //       notification.data
-    //     );
-    //   } catch (error) {
-    //     console.error('Erreur notification push acceptation:', error);
-    //   }
-    // }
+        await pushNotificationService.sendNotification(
+          duelAccepte.provocateur.pushToken,
+          notification,
+          notification.data
+        );
+      } catch (error) {
+        console.error('Erreur notification push acceptation:', error);
+      }
+    }
     
     res.json({
       success: true,
@@ -386,8 +384,8 @@ async function saisirScore(req, res) {
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },
       include: {
-        provocateur: { select: { id: true, pseudo: true } },
-        adversaire: { select: { id: true, pseudo: true } },
+        provocateur: { select: { id: true, pseudo: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, pushToken: true } },
         arbitre: { select: { id: true } },
         validations: true
       }
@@ -449,8 +447,8 @@ async function saisirScore(req, res) {
           dateValidation: new Date()
         },
         include: {
-          provocateur: { select: { id: true, pseudo: true, avatarUrl: true } },
-          adversaire: { select: { id: true, pseudo: true, avatarUrl: true } },
+          provocateur: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
+          adversaire: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
           arbitre: { select: { id: true, pseudo: true, avatarUrl: true } }
         }
       });

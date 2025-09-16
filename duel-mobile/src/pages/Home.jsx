@@ -16,7 +16,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-sm border-b pt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -45,7 +45,7 @@ const Home = () => {
       <section className="relative py-20 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <img src="logo_cey_noir.png" alt="Cercle d'Escrime de Yerres" className="mx-auto mb-6 h-50 w-auto" />
+            <img src="/logo_cey_noir.png" alt="Cercle d'Escrime de Yerres" className="mx-auto mb-6 h-50 w-auto" />
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
               L'arène des
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">

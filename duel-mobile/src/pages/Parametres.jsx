@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { duellistesService, uploadService } from '../services/api';
+import Avatar from '../components/Avatar';
 
 const Parametres = () => {
   const { user, updateUser } = useContext(AuthContext);
@@ -13,29 +14,40 @@ const Parametres = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', content: '' });
   const [initialData, setInitialData] = useState({});
-  const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      const userData = {
-        pseudo: user.pseudo || '',
-        categorie: user.categorie || 'SENIOR',
-        avatarUrl: user.avatarUrl || ''
-      };
-      setFormData(userData);
-      setInitialData(userData);
-      
-      // Construire l'URL complète pour l'avatar si nécessaire
-      if (user.avatarUrl) {
-        const fullAvatarUrl = user.avatarUrl.startsWith('http') 
-          ? user.avatarUrl 
-          : `https://api-duel.benribs.fr${user.avatarUrl}`;
-        setAvatarPreview(fullAvatarUrl);
-      } else {
-        setAvatarPreview(null);
+    const loadUserData = async () => {
+      if (user?.id) {
+        try {
+          // Récupérer les données fraîches du duelliste depuis l'API
+          const response = await duellistesService.getById(user.id);
+          const freshUserData = response.data.data;
+          
+          const userData = {
+            pseudo: freshUserData.pseudo || '',
+            categorie: freshUserData.categorie || 'SENIOR',
+            avatarUrl: freshUserData.avatarUrl || ''
+          };
+          
+          setFormData(userData);
+          setInitialData(userData);
+        } catch (error) {
+          console.error('Erreur lors du chargement des données utilisateur:', error);
+          
+          // Fallback avec les données du contexte si l'API échoue
+          const userData = {
+            pseudo: user.pseudo || '',
+            categorie: user.categorie || 'SENIOR',
+            avatarUrl: user.avatarUrl || ''
+          };
+          setFormData(userData);
+          setInitialData(userData);
+        }
       }
-    }
+    };
+
+    loadUserData();
   }, [user]);
 
   const handleInputChange = (e) => {
@@ -80,8 +92,7 @@ const Parametres = () => {
       if (response.data.success) {
         const avatarUrl = response.data.data.avatarUrl;
         
-        // Mettre à jour le preview et les données du formulaire
-        setAvatarPreview(`https://api-duel.benribs.fr${avatarUrl}`);
+        // Mettre à jour les données du formulaire
         setFormData(prev => ({
           ...prev,
           avatarUrl: avatarUrl
@@ -105,35 +116,12 @@ const Parametres = () => {
   };
 
   // Fonction pour supprimer l'avatar
-  const handleRemoveAvatar = async () => {
-    try {
-      setUploadingAvatar(true);
-      setMessage({ type: '', content: '' });
-
-      // Supprimer l'avatar du serveur
-      await uploadService.deleteAvatar();
-      
-      // Mettre à jour l'interface
-      setAvatarPreview(null);
-      setFormData(prev => ({
-        ...prev,
-        avatarUrl: ''
-      }));
-
-      setMessage({ type: 'success', content: 'Avatar supprimé avec succès !' });
-
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      
-      let errorMessage = 'Erreur lors de la suppression de l\'avatar.';
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      
-      setMessage({ type: 'error', content: errorMessage });
-    } finally {
-      setUploadingAvatar(false);
-    }
+    const handleRemoveAvatar = () => {
+    setFormData(prev => ({
+      ...prev,
+      avatarUrl: ''
+    }));
+    setMessage({ type: 'success', content: 'Avatar supprimé.' });
   };
 
   const handleSubmit = async (e) => {
@@ -192,7 +180,6 @@ const Parametres = () => {
 
   const resetForm = () => {
     setFormData(initialData);
-    setAvatarPreview(initialData.avatarUrl || null);
     setMessage({ type: '', content: '' });
   };
 
@@ -242,12 +229,13 @@ const Parametres = () => {
             <div className="flex items-start space-x-6">
               {/* Preview de l'avatar */}
               <div className="flex-shrink-0">
-                {avatarPreview ? (
+                {formData.avatarUrl ? (
                   <div className="relative">
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar"
-                      className="h-20 w-20 rounded-full object-cover border-2 border-gray-300"
+                    <Avatar 
+                      src={formData.avatarUrl}
+                      pseudo={formData.pseudo}
+                      size="xl"
+                      className="border-2 border-gray-300"
                     />
                     <button
                       type="button"
@@ -258,11 +246,12 @@ const Parametres = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center">
-                    <span className="text-white font-medium text-xl">
-                      {formData.pseudo ? formData.pseudo.charAt(0).toUpperCase() : 'U'}
-                    </span>
-                  </div>
+                  <Avatar 
+                    src={null}
+                    pseudo={formData.pseudo}
+                    size="xl"
+                    className="border-2 border-gray-300"
+                  />
                 )}
               </div>
 

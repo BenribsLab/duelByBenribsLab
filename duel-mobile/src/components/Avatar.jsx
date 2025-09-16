@@ -19,12 +19,16 @@ const Avatar = ({
 
   // Construire l'URL complète pour l'avatar si nécessaire
   const getAvatarUrl = (avatarSrc) => {
+    console.log('Avatar component received src:', avatarSrc);
     if (!avatarSrc) return null;
     if (avatarSrc.startsWith('http')) return avatarSrc;
-    return `https://api-duel.benribs.fr${avatarSrc}`;
+    const fullUrl = `https://api-duel.benribs.fr${avatarSrc}`;
+    console.log('Avatar component built URL:', fullUrl);
+    return fullUrl;
   };
 
   const avatarUrl = getAvatarUrl(src);
+  console.log('Final avatarUrl:', avatarUrl);
 
   // Fonction pour obtenir les initiales
   const getInitials = (name) => {

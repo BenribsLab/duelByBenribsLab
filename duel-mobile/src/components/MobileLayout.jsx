@@ -8,7 +8,7 @@ const MobileLayout = () => {
       <TopNavigation />
       
       {/* Zone de contenu avec padding pour éviter le chevauchement */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 pt-28">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 pt-32">
         <Outlet />
       </main>
     </div>

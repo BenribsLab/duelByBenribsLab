@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../config';
+import pushNotificationService from '../services/pushNotificationService';
 
 const AuthContext = createContext();
 
@@ -56,6 +57,12 @@ export const AuthProvider = ({ children }) => {
       
       // Configurer axios
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      
+      // Initialiser les notifications push après la connexion
+      setTimeout(() => {
+        pushNotificationService.init();
+      }, 1000); // Petit délai pour s'assurer que l'auth est bien configurée
+      
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       throw error;
@@ -74,6 +81,10 @@ export const AuthProvider = ({ children }) => {
       
       // Nettoyer axios
       delete axios.defaults.headers.common['Authorization'];
+      
+      // Désactiver les notifications push lors de la déconnexion
+      pushNotificationService.unregister();
+      
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }

@@ -52,6 +52,49 @@ router.get('/search', [
 // GET /api/admin/stats - Statistiques des utilisateurs
 router.get('/stats', adminController.getStats);
 
+// POST /api/admin/users - Créer un nouvel utilisateur
+router.post('/users', [
+  body('pseudo')
+    .trim()
+    .isLength({ min: 2, max: 30 })
+    .matches(/^[a-zA-Z0-9À-ÿ_-]+$/)
+    .withMessage('Le pseudo doit contenir entre 2 et 30 caractères (lettres, chiffres, _, -)'),
+  
+  body('email')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === '') return true;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(value);
+    })
+    .withMessage('Format d\'email invalide'),
+  
+  body('password')
+    .optional()
+    .custom((value, { req }) => {
+      // Si mode PASSWORD, le mot de passe est requis
+      if (req.body.authMode === 'PASSWORD' && (!value || value.length < 6)) {
+        throw new Error('Le mot de passe doit contenir au moins 6 caractères en mode PASSWORD');
+      }
+      // Si mot de passe fourni, il doit être valide
+      if (value && value.length < 6) {
+        throw new Error('Le mot de passe doit contenir au moins 6 caractères');
+      }
+      return true;
+    }),
+  
+  body('authMode')
+    .isIn(['PASSWORD', 'OTP'])
+    .withMessage('Mode d\'authentification invalide (PASSWORD ou OTP)'),
+  
+  body('autoValidate')
+    .optional()
+    .isBoolean()
+    .withMessage('autoValidate doit être un booléen'),
+  
+  validation.handleValidation,
+], adminController.createUser);
+
 // GET /api/admin/users/:id - Obtenir un utilisateur par ID
 router.get('/users/:id', [
   param('id')

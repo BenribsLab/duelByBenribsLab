@@ -16,6 +16,14 @@ const Admin = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingUser, setCreatingUser] = useState({
+    pseudo: '',
+    email: '',
+    password: '',
+    authMode: 'PASSWORD',
+    autoValidate: true
+  });
   const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 0 });
   const navigate = useNavigate();
 
@@ -147,6 +155,55 @@ const Admin = () => {
       loadStats();
     } catch (error) {
       setError(error.message || 'Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleCreateUser = async (userData) => {
+    try {
+      // Validation côté client
+      if (!userData.pseudo.trim()) {
+        setError('Le pseudo est requis');
+        return;
+      }
+
+      if (userData.authMode === 'PASSWORD' && !userData.password) {
+        setError('Le mot de passe est requis pour le mode PASSWORD');
+        return;
+      }
+
+      if (userData.authMode === 'OTP' && !userData.email) {
+        setError('L\'email est requis pour le mode OTP');
+        return;
+      }
+
+      // Préparer les données à envoyer
+      const dataToSend = {
+        pseudo: userData.pseudo.trim(),
+        email: userData.email.trim() || null,
+        authMode: userData.authMode,
+        autoValidate: userData.autoValidate
+      };
+
+      // N'ajouter le mot de passe que si on est en mode PASSWORD et qu'il est fourni
+      if (userData.authMode === 'PASSWORD' && userData.password) {
+        dataToSend.password = userData.password;
+      }
+
+      await adminService.createUser(dataToSend);
+      
+      setShowCreateModal(false);
+      setCreatingUser({
+        pseudo: '',
+        email: '',
+        password: '',
+        authMode: 'PASSWORD',
+        autoValidate: true
+      });
+      loadUsers();
+      loadStats();
+      setError(''); // Effacer les erreurs précédentes
+    } catch (error) {
+      setError(error.message || 'Erreur lors de la création de l\'utilisateur');
     }
   };
 
@@ -289,6 +346,14 @@ const Admin = () => {
                 >
                   <Search className="h-4 w-4 mr-2" />
                   Rechercher
+                </button>
+                
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer utilisateur
                 </button>
                 
                 {selectedUsers.length > 0 && (
@@ -501,6 +566,111 @@ const Admin = () => {
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
                     Sauvegarder
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de création */}
+          {showCreateModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 className="text-lg font-semibold mb-4">Créer un nouvel utilisateur</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pseudo <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={creatingUser.pseudo}
+                      onChange={(e) => setCreatingUser({...creatingUser, pseudo: e.target.value})}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Pseudo de l'utilisateur"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Mode d'authentification</label>
+                    <select
+                      value={creatingUser.authMode}
+                      onChange={(e) => setCreatingUser({
+                        ...creatingUser, 
+                        authMode: e.target.value,
+                        password: e.target.value === 'OTP' ? '' : creatingUser.password
+                      })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="PASSWORD">Mot de passe</option>
+                      <option value="OTP">Email/OTP</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Email {creatingUser.authMode === 'OTP' && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="email"
+                      value={creatingUser.email}
+                      onChange={(e) => setCreatingUser({...creatingUser, email: e.target.value})}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Adresse email"
+                    />
+                  </div>
+                  
+                  {creatingUser.authMode === 'PASSWORD' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Mot de passe <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={creatingUser.password}
+                        onChange={(e) => setCreatingUser({...creatingUser, password: e.target.value})}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Mot de passe"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="autoValidate"
+                      checked={creatingUser.autoValidate}
+                      onChange={(e) => setCreatingUser({...creatingUser, autoValidate: e.target.checked})}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="autoValidate" className="ml-2 text-sm text-gray-700">
+                      Valider automatiquement l'email
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setCreatingUser({
+                        pseudo: '',
+                        email: '',
+                        password: '',
+                        authMode: 'PASSWORD',
+                        autoValidate: true
+                      });
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={() => handleCreateUser(creatingUser)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Créer
                   </button>
                 </div>
               </div>

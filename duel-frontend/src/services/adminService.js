@@ -61,6 +61,20 @@ class AdminService {
   }
 
   /**
+   * Créer un nouvel utilisateur
+   */
+  async createUser(userData) {
+    try {
+      const response = await api.post('/admin/users', userData, {
+        headers: adminAuthService.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Erreur lors de la création de l\'utilisateur');
+    }
+  }
+
+  /**
    * Supprimer un utilisateur
    */
   async deleteUser(userId) {

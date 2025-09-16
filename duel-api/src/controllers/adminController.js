@@ -125,6 +125,36 @@ class AdminController {
   }
 
   /**
+   * POST /api/admin/users - Créer un nouvel utilisateur
+   */
+  async createUser(req, res) {
+    try {
+      console.log('Données reçues pour création utilisateur:', req.body);
+      const { pseudo, email, password, authMode, autoValidate } = req.body;
+
+      const newUser = await adminService.createUserByAdmin({
+        pseudo,
+        email,
+        password,
+        authMode,
+        autoValidate
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Utilisateur créé avec succès',
+        data: { user: newUser }
+      });
+    } catch (error) {
+      console.error('Erreur dans createUser:', error);
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Erreur lors de la création de l\'utilisateur'
+      });
+    }
+  }
+
+  /**
    * GET /api/admin/stats - Obtenir les statistiques
    */
   async getStats(req, res) {

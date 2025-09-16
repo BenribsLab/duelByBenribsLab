@@ -7,6 +7,12 @@ const emailService = require('./emailService');
 const prisma = new PrismaClient();
 
 class AuthService {
+  // Normaliser un email (trim + lowercase)
+  normalizeEmail(email) {
+    if (!email) return null;
+    return email.trim().toLowerCase();
+  }
+
   // Générer un token JWT
   generateToken(userId, pseudo) {
     return jwt.sign(
@@ -43,6 +49,9 @@ class AuthService {
 
   // Créer un utilisateur avec mot de passe
   async registerWithPassword(pseudo, password, email = null) {
+    // Normaliser l'email
+    const normalizedEmail = this.normalizeEmail(email);
+    
     // Vérifier si le pseudo existe déjà
     const existingUser = await prisma.dueliste.findUnique({
       where: { pseudo }
@@ -53,9 +62,9 @@ class AuthService {
     }
 
     // Vérifier si l'email existe déjà (si fourni)
-    if (email) {
+    if (normalizedEmail) {
       const existingEmail = await prisma.dueliste.findUnique({
-        where: { email }
+        where: { email: normalizedEmail }
       });
 
       if (existingEmail) {
@@ -70,10 +79,10 @@ class AuthService {
     const user = await prisma.dueliste.create({
       data: {
         pseudo,
-        email,
+        email: normalizedEmail,
         passwordHash,
         authMode: 'PASSWORD',
-        emailVerified: email ? false : true // Si pas d'email, on considère comme "vérifié"
+        emailVerified: normalizedEmail ? false : true // Si pas d'email, on considère comme "vérifié"
       }
     });
 
@@ -81,10 +90,10 @@ class AuthService {
     const token = this.generateToken(user.id, user.pseudo);
 
     // Envoyer un email de bienvenue si l'utilisateur a fourni un email
-    if (email) {
+    if (normalizedEmail) {
       try {
-        await emailService.sendWelcomeEmail(email, pseudo, false);
-        console.log(`Email de bienvenue envoyé à ${email} pour ${pseudo}`);
+        await emailService.sendWelcomeEmail(normalizedEmail, pseudo, false);
+        console.log(`Email de bienvenue envoyé à ${normalizedEmail} pour ${pseudo}`);
       } catch (emailError) {
         console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', emailError);
         // On continue même si l'email échoue
@@ -105,6 +114,9 @@ class AuthService {
 
   // Créer un utilisateur avec OTP
   async registerWithOTP(pseudo, email) {
+    // Normaliser l'email
+    const normalizedEmail = this.normalizeEmail(email);
+    
     // Vérifier si le pseudo existe déjà
     const existingUser = await prisma.dueliste.findUnique({
       where: { pseudo }
@@ -116,7 +128,7 @@ class AuthService {
 
     // Vérifier si l'email existe déjà
     const existingEmail = await prisma.dueliste.findUnique({
-      where: { email }
+      where: { email: normalizedEmail }
     });
 
     if (existingEmail) {
@@ -131,7 +143,7 @@ class AuthService {
     const user = await prisma.dueliste.create({
       data: {
         pseudo,
-        email,
+        email: normalizedEmail,
         authMode: 'OTP',
         emailVerified: false,
         otpCode,
@@ -141,8 +153,8 @@ class AuthService {
 
     // Envoyer l'OTP par email
     try {
-      await emailService.sendOTPEmail(email, otpCode, pseudo);
-      console.log(`OTP envoyé à ${email} pour l'utilisateur ${pseudo}`);
+      await emailService.sendOTPEmail(normalizedEmail, otpCode, pseudo);
+      console.log(`OTP envoyé à ${normalizedEmail} pour l'utilisateur ${pseudo}`);
     } catch (emailError) {
       console.error('Erreur lors de l\'envoi de l\'email OTP:', emailError);
       // On continue même si l'email échoue, l'utilisateur peut toujours utiliser l'OTP affiché en console
@@ -194,9 +206,15 @@ class AuthService {
 
   // Demander un OTP pour connexion
   async requestOTP(email) {
+    const normalizedEmail = this.normalizeEmail(email);
+    
+    console.log(`Recherche utilisateur avec email: "${email}" -> normalisé: "${normalizedEmail}"`);
+    
     const user = await prisma.dueliste.findUnique({
-      where: { email }
+      where: { email: normalizedEmail }
     });
+
+    console.log(`Utilisateur trouvé:`, user ? `ID: ${user.id}, pseudo: ${user.pseudo}, authMode: ${user.authMode}` : 'AUCUN');
 
     if (!user || user.authMode !== 'OTP') {
       throw new Error('Utilisateur non trouvé ou méthode d\'authentification incorrecte');
@@ -217,8 +235,8 @@ class AuthService {
 
     // Envoyer l'OTP par email
     try {
-      await emailService.sendOTPEmail(email, otpCode, user.pseudo);
-      console.log(`Nouveau OTP envoyé à ${email} pour l'utilisateur ${user.pseudo}`);
+      await emailService.sendOTPEmail(normalizedEmail, otpCode, user.pseudo);
+      console.log(`Nouveau OTP envoyé à ${normalizedEmail} pour l'utilisateur ${user.pseudo}`);
     } catch (emailError) {
       console.error('Erreur lors de l\'envoi de l\'email OTP:', emailError);
       // On continue même si l'email échoue
@@ -236,8 +254,10 @@ class AuthService {
 
   // Vérifier un OTP et connecter
   async verifyOTP(email, otpCode) {
+    const normalizedEmail = this.normalizeEmail(email);
+    
     const user = await prisma.dueliste.findUnique({
-      where: { email }
+      where: { email: normalizedEmail }
     });
 
     if (!user || user.authMode !== 'OTP') {
