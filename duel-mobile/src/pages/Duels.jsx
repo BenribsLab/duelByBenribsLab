@@ -24,7 +24,7 @@ const Duels = () => {
     }
     
     // Sinon, utiliser la logique par défaut
-    return location.pathname === '/app/nouveau-duel' ? 'nouveau-duel' : 'invitations-recues';
+    return location.pathname === '/nouveau-duel' ? 'nouveau-duel' : 'invitations-recues';
   };
   
   const [activeTab, setActiveTab] = useState(getInitialTab);

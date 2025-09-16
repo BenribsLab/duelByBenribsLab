@@ -10,7 +10,7 @@ const HomeWrapper = () => {
   useEffect(() => {
     // Si l'utilisateur est connecté, rediriger vers le dashboard
     if (!loading && user) {
-      navigate('/app/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 

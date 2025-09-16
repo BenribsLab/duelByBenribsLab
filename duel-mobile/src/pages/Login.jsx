@@ -19,7 +19,7 @@ const Login = () => {
   const location = useLocation();
   
   // URL de redirection après connexion
-  const from = location.state?.from?.pathname || '/app/dashboard';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   // Étape 1: Vérifier l'identifiant et déterminer le mode de connexion
   const handleIdentifierSubmit = async (e) => {

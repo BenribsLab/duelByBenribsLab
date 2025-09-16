@@ -14,6 +14,7 @@ import Parametres from './pages/Parametres';
 
 // Composants
 import ProtectedRoute from './components/ProtectedRoute';
+import MobileLayout from './components/MobileLayout';
 
 function App() {
   return (
@@ -26,37 +27,18 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route 
-                path="/dashboard" 
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <MobileLayout />
                   </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/duels" 
-                element={
-                  <ProtectedRoute>
-                    <Duels />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/duellistes" 
-                element={
-                  <ProtectedRoute>
-                    <Duellistes />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/parametres" 
-                element={
-                  <ProtectedRoute>
-                    <Parametres />
-                  </ProtectedRoute>
-                } 
-              />
+                }
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/duels" element={<Duels />} />
+                <Route path="/nouveau-duel" element={<Duels />} />
+                <Route path="/duellistes" element={<Duellistes />} />
+                <Route path="/parametres" element={<Parametres />} />
+              </Route>
             </Routes>
           </div>
         </Router>

@@ -7,7 +7,7 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { icon: Trophy, label: 'Dashboard', path: '/app/dashboard' },
+    { icon: Trophy, label: 'Dashboard', path: '/dashboard' },
     { icon: Swords, label: 'Mes Duels', path: '/app/duels' },
     { icon: Users, label: 'Duellistes', path: '/app/duellistes' },
     { icon: Calendar, label: 'Nouveau Duel', path: '/app/nouveau-duel' },

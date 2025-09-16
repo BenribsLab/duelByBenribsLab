@@ -71,7 +71,7 @@ const Register = () => {
         } else {
           // Inscription réussie avec mot de passe
           login(response.data.data.user, response.data.data.token);
-          navigate('/app/dashboard');
+          navigate('/dashboard');
         }
       } else {
         setError(response.data.error || 'Erreur lors de l\'inscription');
@@ -96,7 +96,7 @@ const Register = () => {
 
       if (response.data.success) {
         login(response.data.data.user, response.data.data.token);
-        navigate('/app/dashboard');
+        navigate('/dashboard');
       } else {
         setError(response.data.error || 'Code OTP invalide');
       }

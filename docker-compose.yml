@@ -20,6 +20,8 @@ services:
       # Persiste la base SQLite et les fichiers de config avec les bonnes permissions
       - sqlite_data:/app/prisma
       - api_data:/app/data
+      # Persiste les fichiers uploadés (avatars)
+      - uploads_data:/app/uploads
     networks:
       - duel-network
     healthcheck:
@@ -51,6 +53,8 @@ volumes:
   sqlite_data:
     driver: local
   api_data:
+    driver: local
+  uploads_data:
     driver: local
 
 networks:
