@@ -10,7 +10,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       DOCKER_ENV: "true"
-      ALLOWED_ORIGINS: "https://duel.benribs.fr,https://api-duel.benribs.fr,http://localhost:5173,http://localhost:3003, https://localhost"
+      ALLOWED_ORIGINS: "https://duel.benribs.fr,https://api-duel.benribs.fr,http://localhost:5173,http://localhost:3003,https://localhost"
       # Configuration SQLite sécurisée
       DATABASE_URL: "file:./prisma/dev.db"
       DB_PROVIDER: "sqlite"
