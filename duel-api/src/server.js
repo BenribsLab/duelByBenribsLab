@@ -6,6 +6,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const { testConnection } = require('./database');
+const pushNotificationService = require('./services/pushNotificationService');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -101,6 +102,7 @@ app.use('/api/duellistes', require('./routes/duellistes'));
 app.use('/api/duels', require('./routes/duels'));
 app.use('/api/classement', require('./routes/classement'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/users', require('./routes/users'));
 
 // Middleware de gestion d'erreurs
 app.use((err, req, res, _next) => {
@@ -140,6 +142,9 @@ const server = app.listen(PORT, async () => {
   } else {
     console.error('❌ Erreur de connexion à la base de données');
   }
+
+  // Initialiser le service de push notifications
+  pushNotificationService.init();
 });
 
 // Gestion des arrêts propres

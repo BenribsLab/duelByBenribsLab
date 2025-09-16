@@ -1,5 +1,6 @@
 const { prisma } = require('../database');
 const { recalculateStats } = require('../services/classementService');
+const pushNotificationService = require('../services/pushNotificationService');
 
 /**
  * Récupérer tous les duels
@@ -186,11 +187,30 @@ async function proposerDuel(req, res) {
     const nouveauDuel = await prisma.duel.create({
       data,
       include: {
-        provocateur: { select: { id: true, pseudo: true, avatarUrl: true } },
-        adversaire: { select: { id: true, pseudo: true, avatarUrl: true } },
+        provocateur: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
         arbitre: { select: { id: true, pseudo: true, avatarUrl: true } }
       }
     });
+
+    // Envoyer notification push à l'adversaire
+    if (nouveauDuel.adversaire.pushToken) {
+      try {
+        const notification = pushNotificationService.createInvitationNotification(
+          nouveauDuel.provocateur,
+          nouveauDuel.adversaire
+        );
+        
+        await pushNotificationService.sendNotification(
+          nouveauDuel.adversaire.pushToken,
+          notification,
+          notification.data
+        );
+      } catch (error) {
+        console.error('Erreur notification push invitation:', error);
+        // Ne pas faire échouer la création du duel pour une erreur de notification
+      }
+    }
     
     res.status(201).json({
       success: true,
@@ -217,8 +237,8 @@ async function accepterDuel(req, res) {
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },
       include: {
-        provocateur: { select: { id: true, pseudo: true } },
-        adversaire: { select: { id: true, pseudo: true } }
+        provocateur: { select: { id: true, pseudo: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, pushToken: true } }
       }
     });
     
@@ -256,11 +276,29 @@ async function accepterDuel(req, res) {
       where: { id: parseInt(id) },
       data: updateData,
       include: {
-        provocateur: { select: { id: true, pseudo: true, avatarUrl: true } },
-        adversaire: { select: { id: true, pseudo: true, avatarUrl: true } },
+        provocateur: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
         arbitre: { select: { id: true, pseudo: true, avatarUrl: true } }
       }
     });
+
+    // Envoyer notification push au provocateur
+    if (duelAccepte.provocateur.pushToken) {
+      try {
+        const notification = pushNotificationService.createAcceptedNotification(
+          duelAccepte.adversaire,
+          duelAccepte.provocateur
+        );
+        
+        await pushNotificationService.sendNotification(
+          duelAccepte.provocateur.pushToken,
+          notification,
+          notification.data
+        );
+      } catch (error) {
+        console.error('Erreur notification push acceptation:', error);
+      }
+    }
     
     res.json({
       success: true,
@@ -346,6 +384,8 @@ async function saisirScore(req, res) {
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },
       include: {
+        provocateur: { select: { id: true, pseudo: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, pushToken: true } },
         arbitre: { select: { id: true } },
         validations: true
       }
@@ -416,6 +456,38 @@ async function saisirScore(req, res) {
       // Recalculer les statistiques
       await recalculateStats(duel.provocateurId);
       await recalculateStats(duel.adversaireId);
+
+      // Envoyer notifications push de fin de duel
+      try {
+        const scoreText = `${scoreProvocateur}-${scoreAdversaire}`;
+        const notifications = pushNotificationService.createFinishedNotification(
+          vainqueurId === duel.provocateurId ? duel.provocateur : duel.adversaire,
+          vainqueurId === duel.provocateurId ? duel.adversaire : duel.provocateur,
+          scoreText
+        );
+
+        // Notification au vainqueur
+        const vainqueur = vainqueurId === duel.provocateurId ? duel.provocateur : duel.adversaire;
+        if (vainqueur.pushToken) {
+          await pushNotificationService.sendNotification(
+            vainqueur.pushToken,
+            notifications.victory,
+            notifications.victory.data
+          );
+        }
+
+        // Notification au perdant
+        const perdant = vainqueurId === duel.provocateurId ? duel.adversaire : duel.provocateur;
+        if (perdant.pushToken) {
+          await pushNotificationService.sendNotification(
+            perdant.pushToken,
+            notifications.defeat,
+            notifications.defeat.data
+          );
+        }
+      } catch (error) {
+        console.error('Erreur notifications push fin de duel:', error);
+      }
       
       return res.json({
         success: true,
@@ -462,6 +534,23 @@ async function saisirScore(req, res) {
           scoreAdversaire
         }
       });
+
+      // Envoyer notification push à l'autre joueur
+      try {
+        const autreJoueur = duelisteId === duel.provocateurId ? duel.adversaire : duel.provocateur;
+        const saisisseur = duelisteId === duel.provocateurId ? duel.provocateur : duel.adversaire;
+        
+        if (autreJoueur.pushToken) {
+          const notification = pushNotificationService.createScoreNotification(saisisseur, autreJoueur);
+          await pushNotificationService.sendNotification(
+            autreJoueur.pushToken,
+            notification,
+            notification.data
+          );
+        }
+      } catch (error) {
+        console.error('Erreur notification push proposition score:', error);
+      }
       
       return res.json({
         success: true,
@@ -525,6 +614,38 @@ async function saisirScore(req, res) {
         // Recalculer les statistiques
         await recalculateStats(duel.provocateurId);
         await recalculateStats(duel.adversaireId);
+
+        // Envoyer notifications push de fin de duel
+        try {
+          const scoreText = `${scoreProvocateur}-${scoreAdversaire}`;
+          const notifications = pushNotificationService.createFinishedNotification(
+            vainqueurId === duel.provocateurId ? duel.provocateur : duel.adversaire,
+            vainqueurId === duel.provocateurId ? duel.adversaire : duel.provocateur,
+            scoreText
+          );
+
+          // Notification au vainqueur
+          const vainqueur = vainqueurId === duel.provocateurId ? duel.provocateur : duel.adversaire;
+          if (vainqueur.pushToken) {
+            await pushNotificationService.sendNotification(
+              vainqueur.pushToken,
+              notifications.victory,
+              notifications.victory.data
+            );
+          }
+
+          // Notification au perdant
+          const perdant = vainqueurId === duel.provocateurId ? duel.adversaire : duel.provocateur;
+          if (perdant.pushToken) {
+            await pushNotificationService.sendNotification(
+              perdant.pushToken,
+              notifications.defeat,
+              notifications.defeat.data
+            );
+          }
+        } catch (error) {
+          console.error('Erreur notifications push fin de duel validé:', error);
+        }
         
         return res.json({
           success: true,
@@ -554,6 +675,23 @@ async function saisirScore(req, res) {
             scoreAdversaire
           }
         });
+
+        // Envoyer notification push à l'autre joueur pour la contre-proposition
+        try {
+          const autreJoueur = duelisteId === duel.provocateurId ? duel.adversaire : duel.provocateur;
+          const saisisseur = duelisteId === duel.provocateurId ? duel.provocateur : duel.adversaire;
+          
+          if (autreJoueur.pushToken) {
+            const notification = pushNotificationService.createScoreNotification(saisisseur, autreJoueur);
+            await pushNotificationService.sendNotification(
+              autreJoueur.pushToken,
+              notification,
+              notification.data
+            );
+          }
+        } catch (error) {
+          console.error('Erreur notification push contre-proposition:', error);
+        }
         
         return res.json({
           success: true,
