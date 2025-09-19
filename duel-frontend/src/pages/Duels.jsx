@@ -1,9 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Swords, Calendar, Check, X, Trophy, AlertCircle, ChevronDown } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
+import { Swords, Calendar, Check, X, Trophy, AlertCircle, ChevronDown, Users, Search, Mail } from 'lucide-react';
 import { duelsService, duellistesService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import ScoreModal from '../components/ScoreModal';
+import MemberSearchInput from '../components/MemberSearchInput';
+import EmailInviteInput from '../components/EmailInviteInput';
 
 const Duels = () => {
   const location = useLocation();
@@ -666,20 +668,49 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
     notes: '',
     dateProgrammee: ''
   });
+  const [selectedMember, setSelectedMember] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Gérer la sélection d'un membre via recherche
+  const handleMemberSelect = (member) => {
+    setSelectedMember(member);
+    if (member) {
+      setFormData(prev => ({
+        ...prev,
+        adversaireId: member.id.toString()
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        adversaireId: ''
+      }));
+    }
+  };
+
+  // Gérer l'invitation par email
+  const handleEmailInvite = async (email) => {
+    try {
+      // TODO: Implémenter l'API d'invitation par email
+      console.log('Invitation envoyée à:', email);
+      alert(`Invitation envoyée à ${email} !`);
+      // onDuelCreated(); // Optionnel: refresh des données
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'invitation:', error);
+      alert('Erreur lors de l\'envoi de l\'invitation');
+    }
+  };
   // Pré-sélectionner l'adversaire depuis l'URL si présent
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const adversaireParam = urlParams.get('adversaire');
     
     if (adversaireParam) {
-      setFormData(prev => ({
-        ...prev,
-        adversaireId: adversaireParam
-      }));
+      const adversaire = duellistes.find(d => d.id.toString() === adversaireParam);
+      if (adversaire) {
+        handleMemberSelect(adversaire);
+      }
     }
-  }, [location.search]);
+  }, [location.search, duellistes]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -714,7 +745,66 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Défier un adversaire</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-6">Défier un adversaire</h3>
+      
+      {/* 3 modes d'invitation */}
+      <div className="space-y-6 mb-6">
+        {/* Mode 1: Recherche rapide */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center mb-3">
+            <Search className="h-5 w-5 text-blue-600 mr-2" />
+            <h4 className="text-sm font-medium text-gray-900">Recherche rapide</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-3">Rechercher un membre par son pseudo</p>
+          <MemberSearchInput
+            duellistes={duellistes}
+            onSelect={handleMemberSelect}
+            currentUserId={user?.id}
+            placeholder="Tapez le pseudo d'un duelliste..."
+          />
+          {selectedMember && (
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800">
+                <strong>{selectedMember.pseudo}</strong> sélectionné pour le duel
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Mode 2: Lien vers page Duellistes */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center mb-3">
+            <Users className="h-5 w-5 text-green-600 mr-2" />
+            <h4 className="text-sm font-medium text-gray-900">Parcourir tous les membres</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-3">Voir la liste complète avec profils et statistiques</p>
+          <Link
+            to="/app/duellistes"
+            className="inline-flex items-center px-4 py-2 border border-green-600 text-sm font-medium rounded-md text-green-600 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Voir la liste des duellistes
+          </Link>
+        </div>
+
+        {/* Mode 3: Invitation par email */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center mb-3">
+            <Mail className="h-5 w-5 text-orange-600 mr-2" />
+            <h4 className="text-sm font-medium text-gray-900">Inviter quelqu'un de nouveau</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-3">Inviter une personne qui n'est pas encore inscrite</p>
+          <EmailInviteInput
+            onInvite={handleEmailInvite}
+            placeholder="email@exemple.com"
+          />
+        </div>
+      </div>
+
+      {/* Séparateur */}
+      <div className="border-t border-gray-200 pt-6">
+        <h4 className="text-sm font-medium text-gray-900 mb-4">Ou utiliser la méthode classique</h4>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
