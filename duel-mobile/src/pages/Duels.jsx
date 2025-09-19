@@ -302,8 +302,9 @@ const Duels = () => {
           ) : (
             getInvitationsRecues().map((duel) => (
               <div key={duel.id} className="bg-white shadow rounded-lg p-6 border-l-4 border-yellow-400">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+                <div className="space-y-4">
+                  {/* Contenu principal */}
+                  <div>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <div className="font-medium text-gray-900">
@@ -328,19 +329,23 @@ const Duels = () => {
                     )}
                   </div>
 
-                  <div className="flex space-x-2">
+                  {/* Séparateur visuel */}
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Actions */}
+                  <div className="flex space-x-3">
                     <button
                       onClick={() => handleAcceptDuel(duel.id)}
-                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      <Check className="h-4 w-4 mr-2" />
                       Accepter
                     </button>
                     <button
                       onClick={() => handleRefuseDuel(duel.id)}
-                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <X className="h-4 w-4 mr-2" />
                       Refuser
                     </button>
                   </div>
@@ -410,8 +415,9 @@ const Duels = () => {
           ) : (
             getDuelsActifs().map((duel) => (
               <div key={duel.id} className="bg-white shadow rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+                <div className="space-y-4">
+                  {/* Contenu principal */}
+                  <div>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <div className="font-medium text-gray-900">
@@ -456,22 +462,25 @@ const Duels = () => {
                     )}
                   </div>
 
+                  {/* Séparateur visuel */}
+                  <div className="border-t border-gray-200"></div>
+
                   {/* Actions */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex space-x-3">
                     {duel.etat === 'PROPOSE' && (
                       <>
                         <button
                           onClick={() => handleAcceptDuel(duel.id)}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                          className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                         >
-                          <Check className="h-4 w-4 mr-1" />
+                          <Check className="h-4 w-4 mr-2" />
                           Accepter
                         </button>
                         <button
                           onClick={() => handleRefuseDuel(duel.id)}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                          className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                         >
-                          <X className="h-4 w-4 mr-1" />
+                          <X className="h-4 w-4 mr-2" />
                           Refuser
                         </button>
                       </>
@@ -480,28 +489,28 @@ const Duels = () => {
                     {duel.etat === 'A_JOUER' && (
                       <button 
                         onClick={() => handleOpenScoreModal(duel)}
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        <Trophy className="h-4 w-4 mr-1" />
-                        Saisir Résultat
+                        <Trophy className="h-4 w-4 mr-2" />
+                        Saisir le Résultat
                       </button>
                     )}
 
                     {duel.etat === 'PROPOSE_SCORE' && (
                       <button 
                         onClick={() => handleOpenScoreModal(duel)}
-                        className="inline-flex items-center px-3 py-1 border border-yellow-300 text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-yellow-300 text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
                       >
-                        <Trophy className="h-4 w-4 mr-1" />
+                        <Trophy className="h-4 w-4 mr-2" />
                         Voir Proposition
                       </button>
                     )}
 
                     {duel.etat === 'EN_ATTENTE_VALIDATION' && (
-                      <span className="inline-flex items-center px-3 py-1 text-sm text-orange-600">
-                        <AlertCircle className="h-4 w-4 mr-1" />
+                      <div className="w-full flex items-center justify-center px-4 py-2 text-sm text-orange-600">
+                        <AlertCircle className="h-4 w-4 mr-2" />
                         En attente de validation
-                      </span>
+                      </div>
                     )}
                   </div>
                 </div>
