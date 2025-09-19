@@ -90,7 +90,7 @@ model EmailInvitation {
   clickedAt        DateTime?  // Quand le lien a été cliqué
   registeredAt     DateTime?  // Quand la personne s'est inscrite
   registeredUserId Int?       // ID du nouvel utilisateur créé
-  expiresAt        DateTime   @default(dbgenerated("datetime('now', '+30 days')")) // Expiration 30 jours
+  expiresAt        DateTime?  // Expiration 30 jours (géré en code)
   reminderSentAt   DateTime?  // Quand un rappel a été envoyé
   
   // Métadonnées pour analytics
