@@ -388,7 +388,7 @@ class EmailService {
    */
   generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName) {
     const displayName = recipientName ? `Bonjour ${recipientName}` : 'Bonjour';
-    const appUrl = process.env.FRONTEND_URL || 'https://votre-app.com';
+    const appUrl = process.env.FRONTEND_URL || 'https://duel.benribs.fr';
     
     return `
       <!DOCTYPE html>
@@ -505,7 +505,7 @@ class EmailService {
             </ul>
           </div>
           
-          <p>L'inscription est gratuite et ne prend que quelques minutes !</p>
+          <p>L'inscription est gratuite et ne prend que quelques secondes !</p>
           
           <div class="footer">
             <p><strong>Duel By Benribs Lab</strong><br>
