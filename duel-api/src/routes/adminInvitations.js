@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateAdmin } = require('../middleware/adminAuth');
 
 const prisma = new PrismaClient();
 
@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
  * GET /api/admin/invitations
  * Récupérer toutes les invitations avec filtres et pagination
  */
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const {
       page = 1,
@@ -107,7 +107,7 @@ router.get('/', authenticateToken, async (req, res) => {
  * GET /api/admin/invitations/stats
  * Récupérer les statistiques globales des invitations
  */
-router.get('/stats', authenticateToken, async (req, res) => {
+router.get('/stats', authenticateAdmin, async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
 
@@ -248,7 +248,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
  * POST /api/admin/invitations/:id/resend
  * Renvoyer une invitation
  */
-router.post('/:id/resend', authenticateToken, async (req, res) => {
+router.post('/:id/resend', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const emailService = require('../services/emailService');
@@ -314,7 +314,7 @@ router.post('/:id/resend', authenticateToken, async (req, res) => {
  * DELETE /api/admin/invitations/:id
  * Supprimer une invitation
  */
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -351,7 +351,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
  * POST /api/admin/invitations/bulk-delete
  * Supprimer plusieurs invitations
  */
-router.post('/bulk-delete', authenticateToken, async (req, res) => {
+router.post('/bulk-delete', authenticateAdmin, async (req, res) => {
   try {
     const { ids } = req.body;
 
