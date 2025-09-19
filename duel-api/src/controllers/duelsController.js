@@ -861,8 +861,8 @@ async function accepterPropositionScore(req, res) {
         dateValidation: new Date()
       },
       include: {
-        provocateur: { select: { id: true, pseudo: true, avatarUrl: true } },
-        adversaire: { select: { id: true, pseudo: true, avatarUrl: true } },
+        provocateur: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
+        adversaire: { select: { id: true, pseudo: true, avatarUrl: true, pushToken: true } },
         arbitre: { select: { id: true, pseudo: true, avatarUrl: true } }
       }
     });
@@ -880,13 +880,17 @@ async function accepterPropositionScore(req, res) {
       const proposant = proposantId === duel.provocateurId ? duelValide.provocateur : duelValide.adversaire;
       const acceptant = acceptantId === duel.provocateurId ? duelValide.provocateur : duelValide.adversaire;
       
-      if (proposant) {
+      if (proposant && proposant.pushToken) {
         const notification = pushNotificationService.createScoreAcceptedNotification(acceptant, proposant);
-        await pushNotificationService.sendToUser(proposant.id, notification, {
-          type: 'score_accepted',
-          duelId: id.toString(),
-          link: '/duels?tab=duels-recents'
-        });
+        await pushNotificationService.sendNotification(
+          proposant.pushToken,
+          notification,
+          {
+            type: 'score_accepted',
+            duelId: id.toString(),
+            link: '/duels?tab=duels-recents'
+          }
+        );
       }
     } catch (error) {
       console.error('Erreur notification push acceptation score:', error);
