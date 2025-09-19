@@ -72,8 +72,7 @@ class PushNotificationService {
         token: token,
         notification: {
           title: notification.title,
-          body: notification.body,
-          icon: notification.icon || '/logo_cey_noir.png'
+          body: notification.body
         },
         data: {
           ...data,
@@ -126,8 +125,7 @@ class PushNotificationService {
         tokens: tokens,
         notification: {
           title: notification.title,
-          body: notification.body,
-          icon: notification.icon || '/logo_cey_noir.png'
+          body: notification.body
         },
         data: {
           ...data,

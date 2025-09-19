@@ -1,169 +1,110 @@
-import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
-
-// Configuration Firebase (récupérée depuis votre google-services.json)
-const firebaseConfig = {
-  apiKey: "AIzaSyB3YPe-e0nZ4RQdIiwOXmwK80N0HhdU2Tg",
-  authDomain: "duelbybenribslab.firebaseapp.com",
-  projectId: "duelbybenribslab", 
-  storageBucket: "duelbybenribslab.firebasestorage.app",
-  messagingSenderId: "586179973861",
-  appId: "1:586179973861:android:0b9af5fa688b4f9d163a0c"
-};
+import { PushNotifications } from "@capacitor/push-notifications"
+import config from "../config"
 
 class PushNotificationService {
   constructor() {
-    this.token = null;
-    this.isInitialized = false;
-    this.messaging = null;
+    this.token = null
+    this.isInitialized = false
   }
 
   async init() {
-    if (this.isInitialized) return;
+    if (this.isInitialized) return
 
     try {
-      // Vérifier si Firebase Messaging est supporté
-      const supported = await isSupported();
-      if (!supported) {
-        console.warn('Firebase Messaging n\'est pas supporté sur ce navigateur');
-        return;
-      }
-
-      // Initialiser Firebase
-      const app = initializeApp(firebaseConfig);
-      this.messaging = getMessaging(app);
-
-      // Demander les permissions et obtenir le token
-      await this.requestPermission();
-      
-      // Écouter les messages
-      this.setupMessageListener();
-      
-      this.isInitialized = true;
-      console.log('✅ Service de notifications initialisé');
-      
+      await this.requestPermission()
+      this.setupListeners()
+      this.isInitialized = true
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation des notifications:', error);
+      console.error("Erreur lors de l initialisation des notifications:", error)
     }
   }
 
   async requestPermission() {
     try {
-      // Demander la permission
-      const permission = await Notification.requestPermission();
-      
-      if (permission === 'granted') {
-        console.log('✅ Permission accordée');
-        
-        // Obtenir le token FCM
-        const token = await getToken(this.messaging, {
-          vapidKey: 'BGWYyktE_JnPbLeQwTOsCd_LQv5hjGuueHbNZsA4zkTw4XYNFgUoya8SkNt13xq8K9axqwn4kMXsN_ofiVbXguk'
-        });
-        
-        if (token) {
-          console.log('📱 Token FCM:', token);
-          this.token = token;
-          await this.sendTokenToServer(token);
-        }
+      const permission = await PushNotifications.requestPermissions()
+      if (permission.receive === "granted") {
+        await PushNotifications.register()
       } else {
-        console.warn('❌ Permission refusée');
+        console.warn("Permission refusee:", permission)
       }
     } catch (error) {
-      console.error('Erreur lors de la demande de permission:', error);
+      console.error("Erreur lors de la demande de permission:", error)
     }
   }
 
-  setupMessageListener() {
-    // Écouter les messages quand l'app est ouverte
-    onMessage(this.messaging, (payload) => {
-      console.log('🔔 Message reçu:', payload);
-      
-      // Afficher une notification personnalisée
-      this.showNotification(payload);
-      
-      // Émettre un événement pour l'app
-      window.dispatchEvent(new CustomEvent('firebaseMessage', {
-        detail: payload
-      }));
-    });
-  }
+  setupListeners() {
+    PushNotifications.addListener("registration", (token) => {
+      console.log("Token FCM recu:", token.value)
+      this.token = token.value
+      this.sendTokenToServer(token.value)
+    })
 
-  showNotification(payload) {
-    const { title, body, icon } = payload.notification || {};
-    
-    // Créer une notification navigateur
-    if (Notification.permission === 'granted') {
-      const notification = new Notification(title || 'Duel By Benribs Lab', {
-        body: body || 'Nouvelle notification',
-        icon: icon || '/logo_cey_noir.png',
-        tag: 'duel-notification',
-        requireInteraction: true
-      });
+    PushNotifications.addListener("registrationError", (error) => {
+      console.error("Erreur d enregistrement:", error)
+    })
 
-      // Gérer le clic sur la notification
-      notification.onclick = () => {
-        window.focus();
-        this.handleNotificationClick(payload);
-        notification.close();
-      };
-    }
+    PushNotifications.addListener("pushNotificationReceived", (notification) => {
+      console.log("NOTIFICATION RECUE APP OUVERTE:", notification)
+      console.log("DETAILS NOTIFICATION:", JSON.stringify(notification, null, 2))
+    })
+
+    PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+      console.log("NOTIFICATION CLIQUEE:", action)
+      console.log("DETAILS ACTION:", JSON.stringify(action, null, 2))
+    })
   }
 
   async sendTokenToServer(token) {
     try {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      
-      if (!userData.id) {
-        console.warn('Utilisateur non connecté, token non envoyé');
-        return;
-      }
+      const userData = JSON.parse(localStorage.getItem("user") || "{}")
+      if (!userData.id) return
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/${userData.id}/push-token`, {
-        method: 'POST',
+      const response = await fetch(`${config.API_BASE_URL}/users/${userData.id}/push-token`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userData.token}`
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           pushToken: token,
-          platform: 'web'
+          platform: "android"
         })
-      });
+      })
 
       if (response.ok) {
-        console.log('✅ Token envoyé au serveur');
+        console.log("Token envoye au serveur")
+      } else {
+        console.warn("Erreur lors de l envoi du token au serveur")
       }
     } catch (error) {
-      console.error('Erreur envoi token:', error);
+      console.error("Erreur envoi token:", error)
     }
   }
 
-  handleNotificationClick(payload) {
-    const data = payload.data || {};
-    
-    switch (data.type) {
-      case 'invitation':
-        window.location.href = '/duels?tab=invitations-recues';
-        break;
-      case 'accepted':
-        window.location.href = '/duels?tab=duels-actifs';
-        break;
-      case 'score':
-        window.location.href = '/duels?tab=duels-actifs';
-        break;
-      case 'finished':
-        window.location.href = '/duels?tab=duels-recents';
-        break;
-      default:
-        window.location.href = '/dashboard';
+  async unregister() {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}")
+      if (userData.id) {
+        await fetch(`${config.API_BASE_URL}/users/${userData.id}/push-token`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        })
+      }
+
+      await PushNotifications.removeAllListeners()
+      this.token = null
+      this.isInitialized = false
+    } catch (error) {
+      console.error("Erreur lors de la desinscription:", error)
     }
   }
 
   getToken() {
-    return this.token;
+    return this.token
   }
 }
 
-// Instance singleton
-export const pushNotificationService = new PushNotificationService();
-export default pushNotificationService;
+export const pushNotificationService = new PushNotificationService()
+export default pushNotificationService
