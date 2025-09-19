@@ -5,6 +5,12 @@ class PushNotificationService {
   constructor() {
     this.token = null
     this.isInitialized = false
+    this.navigationCallback = null
+  }
+
+  // Méthode pour définir la fonction de navigation
+  setNavigationCallback(navigate) {
+    this.navigationCallback = navigate
   }
 
   async init() {
@@ -51,6 +57,15 @@ class PushNotificationService {
     PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
       console.log("NOTIFICATION CLIQUEE:", action)
       console.log("DETAILS ACTION:", JSON.stringify(action, null, 2))
+      
+      // Récupérer les données de navigation de la notification
+      const notificationData = action.notification.data
+      console.log("DONNEES NOTIFICATION:", notificationData)
+      
+      if (notificationData && notificationData.link && this.navigationCallback) {
+        console.log("NAVIGATION VERS:", notificationData.link)
+        this.navigationCallback(notificationData.link)
+      }
     })
   }
 

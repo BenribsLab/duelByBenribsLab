@@ -870,7 +870,28 @@ async function accepterPropositionScore(req, res) {
     // Recalculer les statistiques
     await recalculateStats(duel.provocateurId);
     await recalculateStats(duel.adversaireId);
-    
+
+    // Envoyer notification push à celui qui avait proposé le score
+    try {
+      // Trouver qui avait proposé le score (celui qui n'accepte pas)
+      const proposantId = duel.provocateurId === duelisteId ? duel.adversaireId : duel.provocateurId;
+      const acceptantId = duelisteId;
+      
+      const proposant = proposantId === duel.provocateurId ? duelValide.provocateur : duelValide.adversaire;
+      const acceptant = acceptantId === duel.provocateurId ? duelValide.provocateur : duelValide.adversaire;
+      
+      if (proposant) {
+        const notification = pushNotificationService.createScoreAcceptedNotification(acceptant, proposant);
+        await pushNotificationService.sendNotificationToUser(proposant.id, notification, {
+          type: 'score_accepted',
+          duelId: id.toString(),
+          link: '/duels?tab=duels-recents'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur notification push acceptation score:', error);
+    }
+
     return res.json({
       success: true,
       data: duelValide,

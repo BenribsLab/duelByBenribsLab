@@ -208,6 +208,21 @@ class PushNotificationService {
   }
 
   /**
+   * Créer une notification pour l'acceptation d'un score
+   */
+  createScoreAcceptedNotification(acceptant, proposant) {
+    return {
+      title: 'Score accepté !',
+      body: `${acceptant.pseudo} a accepté votre proposition de score`,
+      icon: '/logo_cey_noir.png',
+      data: {
+        type: 'score_accepted',
+        link: '/duels?tab=duels-recents'
+      }
+    };
+  }
+
+  /**
    * Créer une notification pour un duel terminé
    */
   createFinishedNotification(vainqueur, perdant, score) {
