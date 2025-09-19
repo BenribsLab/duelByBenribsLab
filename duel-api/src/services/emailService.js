@@ -342,9 +342,9 @@ class EmailService {
   }
 
   /**
-   * Envoyer un email d'invitation de duel
+   * Envoyer un email d'invitation de duel avec tracking
    */
-  async sendInvitationEmail(recipientEmail, inviterName, inviterPseudo, recipientName = null) {
+  async sendInvitationEmail(recipientEmail, inviterName, inviterPseudo, recipientName = null, invitationId = null) {
     try {
       const graphClient = await this.getGraphClient();
       
@@ -353,7 +353,7 @@ class EmailService {
           subject: `⚔️ ${inviterPseudo} vous invite à rejoindre Duel By Benribs Lab !`,
           body: {
             contentType: 'HTML',
-            content: this.generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName)
+            content: this.generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId)
           },
           toRecipients: [
             {
@@ -375,7 +375,7 @@ class EmailService {
 
       await graphClient.api(`/users/${this.senderEmail}/sendMail`).post(message);
       
-      console.log(`Email d'invitation envoyé avec succès à ${recipientEmail} par ${inviterPseudo}`);
+      console.log(`Email d'invitation envoyé avec succès à ${recipientEmail} par ${inviterPseudo}${invitationId ? ` (ID: ${invitationId})` : ''}`);
       return true;
     } catch (error) {
       console.error('Erreur lors de l\'envoi de l\'email d\'invitation:', error);
@@ -384,11 +384,18 @@ class EmailService {
   }
 
   /**
-   * Générer le contenu HTML de l'email d'invitation
+   * Générer le contenu HTML de l'email d'invitation avec tracking
    */
-  generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName) {
+  generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId = null) {
     const displayName = recipientName ? `Bonjour ${recipientName}` : 'Bonjour';
     const appUrl = process.env.FRONTEND_URL || 'https://duel.benribs.fr';
+    const apiUrl = process.env.API_URL || 'http://duel-api.benribs.fr';
+    
+    // URLs avec tracking si on a un ID d'invitation
+    const trackingPixelUrl = invitationId ? `${apiUrl}/api/track/email-open/${invitationId}` : null;
+    const trackedSignupUrl = invitationId ? 
+      `${apiUrl}/api/track/invitation-click/${invitationId}?redirect=${encodeURIComponent(`${appUrl}/register?invitedBy=${encodeURIComponent(inviterPseudo)}&invitationId=${invitationId}`)}` :
+      `${appUrl}/register?invitedBy=${encodeURIComponent(inviterPseudo)}`;
     
     return `
       <!DOCTYPE html>
@@ -489,7 +496,7 @@ class EmailService {
           <p>Rejoignez notre plateforme de gestion des duels d'escrime et commencez à défier d'autres escrimeurs !</p>
           
           <div style="text-align: center;">
-            <a href="${appUrl}/register?invitedBy=${encodeURIComponent(inviterPseudo)}" class="cta-button">
+            <a href="${trackedSignupUrl}" class="cta-button">
               🎯 Rejoindre maintenant
             </a>
           </div>
@@ -507,6 +514,12 @@ class EmailService {
           
           <p>L'inscription est gratuite et ne prend que quelques secondes !</p>
           
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${trackedSignupUrl}" class="cta-button">
+              ✨ Commencer l'aventure
+            </a>
+          </div>
+          
           <div class="footer">
             <p><strong>Duel By Benribs Lab</strong><br>
             Système de gestion des duels d'escrime<br>
@@ -518,6 +531,8 @@ class EmailService {
             </p>
           </div>
         </div>
+        
+        ${trackingPixelUrl ? `<img src="${trackingPixelUrl}" alt="" style="display:none; width:1px; height:1px;">` : ''}
       </body>
       </html>
     `;

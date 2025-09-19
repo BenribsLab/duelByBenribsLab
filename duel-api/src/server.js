@@ -96,6 +96,7 @@ app.use('/api/admin/auth', require('./routes/adminAuth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/duels', require('./routes/adminDuels'));
 app.use('/api/admin/database', require('./routes/adminDatabase'));
+app.use('/api/admin/invitations', require('./routes/adminInvitations'));
 
 // Routes API (à implémenter)
 app.use('/api/duellistes', require('./routes/duellistes'));
@@ -104,6 +105,7 @@ app.use('/api/classement', require('./routes/classement'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/invitations', require('./routes/invitations'));
+app.use('/api/track', require('./routes/tracking'));
 
 // Middleware de gestion d'erreurs
 app.use((err, req, res, _next) => {

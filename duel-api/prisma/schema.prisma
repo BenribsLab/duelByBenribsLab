@@ -32,6 +32,7 @@ model Dueliste {
   duelsProvoques  Duel[]            @relation("DuelsProvoques")
   validations     ValidationScore[]
   emailInvitations EmailInvitation[] @relation("EmailInvitations")
+  registeredFromInvitations EmailInvitation[] @relation("RegisteredFromInvitation")
 
   @@map("duellistes")
 }
@@ -78,14 +79,32 @@ model ValidationScore {
 }
 
 model EmailInvitation {
-  id            Int      @id @default(autoincrement())
-  email         String
-  recipientName String?
-  inviterId     Int
-  status        String   @default("SENT") // SENT, OPENED, REGISTERED, EXPIRED
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  inviter       Dueliste @relation("EmailInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+  id               Int      @id @default(autoincrement())
+  email            String
+  recipientName    String?
+  inviterId        Int
+  status           String   @default("SENT") // SENT, OPENED, CLICKED, REGISTERED, EXPIRED
+  
+  // Tracking des événements
+  openedAt         DateTime?  // Quand l'email a été ouvert
+  clickedAt        DateTime?  // Quand le lien a été cliqué
+  registeredAt     DateTime?  // Quand la personne s'est inscrite
+  registeredUserId Int?       // ID du nouvel utilisateur créé
+  expiresAt        DateTime   @default(dbgenerated("datetime('now', '+30 days')")) // Expiration 30 jours
+  reminderSentAt   DateTime?  // Quand un rappel a été envoyé
+  
+  // Métadonnées pour analytics
+  userAgent        String?    // Navigateur utilisé
+  ipAddress        String?    // IP anonymisée (3 premiers octets)
+  referer          String?    // D'où vient le clic
+  
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  inviter          Dueliste @relation("EmailInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+  registeredUser   Dueliste? @relation("RegisteredFromInvitation", fields: [registeredUserId], references: [id], onDelete: SetNull)
 
   @@map("email_invitations")
 }

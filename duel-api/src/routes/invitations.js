@@ -81,21 +81,32 @@ router.post('/email', authenticateToken, async (req, res) => {
       });
     }
 
-    // Envoyer l'email d'invitation
-    await emailService.sendInvitationEmail(
-      email,
-      inviter.pseudo, // Utiliser le pseudo comme nom d'affichage
-      inviter.pseudo,
-      recipientName
-    );
-
-    // Enregistrer l'invitation en base
-    await prisma.emailInvitation.create({
+    // Créer d'abord l'invitation en base pour obtenir l'ID
+    const invitation = await prisma.emailInvitation.create({
       data: {
         email: email,
         recipientName: recipientName || null,
         inviterId: inviterId,
-        status: 'SENT'
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
+      }
+    });
+
+    // Envoyer l'email d'invitation avec l'ID pour le tracking
+    await emailService.sendInvitationEmail(
+      email,
+      inviter.pseudo, // Utiliser le pseudo comme nom d'affichage
+      inviter.pseudo,
+      recipientName,
+      invitation.id // Ajouter l'ID pour le tracking
+    );
+
+    // Mettre à jour le statut à 'SENT'
+    await prisma.emailInvitation.update({
+      where: { id: invitation.id },
+      data: { 
+        status: 'SENT',
+        sentAt: new Date()
       }
     });
 

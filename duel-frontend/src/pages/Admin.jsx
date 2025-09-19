@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Trash2, Edit, Plus, Shield, Mail, Key, AlertTriangle, LogOut, Swords, BarChart3, Settings } from 'lucide-react';
+import { Users, Search, Trash2, Edit, Plus, Shield, Mail, Key, AlertTriangle, LogOut, Swords, BarChart3, Settings, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import adminService from '../services/adminService';
 import adminAuthService from '../services/adminAuthService';
@@ -31,6 +31,7 @@ const Admin = () => {
   const tabs = [
     { id: 'users', label: 'Utilisateurs', icon: Users },
     { id: 'duels', label: 'Duels', icon: Swords },
+    { id: 'invitations', label: 'Invitations', icon: Send },
     { id: 'stats', label: 'Statistiques', icon: BarChart3 },
     { id: 'system', label: 'Système', icon: Settings }
   ];
@@ -262,7 +263,13 @@ const Admin = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === 'invitations') {
+                    navigate('/admin/invitations');
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
