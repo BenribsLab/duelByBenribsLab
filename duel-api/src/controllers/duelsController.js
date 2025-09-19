@@ -882,7 +882,7 @@ async function accepterPropositionScore(req, res) {
       
       if (proposant) {
         const notification = pushNotificationService.createScoreAcceptedNotification(acceptant, proposant);
-        await pushNotificationService.sendNotificationToUser(proposant.id, notification, {
+        await pushNotificationService.sendToUser(proposant.id, notification, {
           type: 'score_accepted',
           duelId: id.toString(),
           link: '/duels?tab=duels-recents'
