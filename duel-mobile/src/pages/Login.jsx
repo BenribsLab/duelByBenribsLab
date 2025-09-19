@@ -133,6 +133,25 @@ const Login = () => {
     setLoginMode('');
   };
 
+  // Fonction pour gérer le scroll quand le champ identifiant est focusé (seulement étape 1)
+  const handleIdentifierFocus = () => {
+    // Seulement pour l'étape 1 (identifiant)
+    if (step !== 1) return;
+    
+    // Attendre que le clavier virtuel apparaisse avant de scroller
+    setTimeout(() => {
+      // Scroller vers le bas de la page pour libérer de l'espace pour le bouton
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollAmount = documentHeight - windowHeight + 100; // +100px de marge
+      
+      window.scrollTo({ 
+        top: scrollAmount, 
+        behavior: 'smooth' 
+      });
+    }, 300);
+  };
+
   // Étape 1: Saisie de l'identifiant
   if (step === 1) {
     return (
@@ -182,6 +201,7 @@ const Login = () => {
                   placeholder="Email ou pseudo"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
+                  onFocus={handleIdentifierFocus}
                 />
               </div>
             </div>

@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
+import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X, LogOut } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { duellistesService, uploadService } from '../services/api';
 import Avatar from '../components/Avatar';
 
 const Parametres = () => {
-  const { user, updateUser } = useContext(AuthContext);
+  const { user, updateUser, logout } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     pseudo: '',
     categorie: 'SENIOR',
@@ -122,6 +122,13 @@ const Parametres = () => {
       avatarUrl: ''
     }));
     setMessage({ type: 'success', content: 'Avatar supprimé.' });
+  };
+
+  // Fonction pour gérer la déconnexion
+  const handleLogout = () => {
+    if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+      logout();
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -352,6 +359,25 @@ const Parametres = () => {
               <li>Votre catégorie détermine dans quel classement vous apparaissez</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      {/* Section déconnexion */}
+      <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-red-800">Zone de déconnexion</h3>
+            <p className="text-sm text-red-600 mt-1">
+              Vous serez déconnecté de l'application et devrez vous reconnecter.
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Se déconnecter
+          </button>
         </div>
       </div>
     </div>
