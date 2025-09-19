@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const emailService = require('../services/emailService');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
  * POST /api/invitations/email
  * Envoyer une invitation par email
  */
-router.post('/email', auth, async (req, res) => {
+router.post('/email', authenticateToken, async (req, res) => {
   try {
     const { email, recipientName } = req.body;
     const inviterId = req.user.id;
@@ -122,7 +122,7 @@ router.post('/email', auth, async (req, res) => {
  * GET /api/invitations/check-email
  * Vérifier si un email est déjà inscrit
  */
-router.get('/check-email', auth, async (req, res) => {
+router.get('/check-email', authenticateToken, async (req, res) => {
   try {
     const { email } = req.query;
 
@@ -177,7 +177,7 @@ router.get('/check-email', auth, async (req, res) => {
  * GET /api/invitations/my-invitations
  * Récupérer les invitations envoyées par l'utilisateur connecté
  */
-router.get('/my-invitations', auth, async (req, res) => {
+router.get('/my-invitations', authenticateToken, async (req, res) => {
   try {
     const inviterId = req.user.id;
 
