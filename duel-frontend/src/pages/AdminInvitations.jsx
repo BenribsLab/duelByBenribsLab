@@ -6,6 +6,7 @@ import {
   UserPlus, AlertCircle, CheckCircle2,
   Clock, XCircle
 } from 'lucide-react';
+import adminAuthService from '../services/adminAuthService';
 
 const AdminInvitations = () => {
   const [invitations, setInvitations] = useState([]);
@@ -35,7 +36,6 @@ const AdminInvitations = () => {
 
   const fetchInvitations = async () => {
     try {
-      const token = localStorage.getItem('token');
       const queryParams = new URLSearchParams();
       
       Object.entries(filters).forEach(([key, value]) => {
@@ -43,9 +43,7 @@ const AdminInvitations = () => {
       });
 
       const response = await fetch(`/api/admin/invitations?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: adminAuthService.getAuthHeaders()
       });
 
       if (response.ok) {
@@ -61,11 +59,8 @@ const AdminInvitations = () => {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/admin/invitations/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: adminAuthService.getAuthHeaders()
       });
 
       if (response.ok) {
@@ -79,12 +74,9 @@ const AdminInvitations = () => {
 
   const handleResendInvitation = async (invitationId) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/admin/invitations/${invitationId}/resend`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: adminAuthService.getAuthHeaders()
       });
 
       if (response.ok) {
@@ -101,12 +93,9 @@ const AdminInvitations = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette invitation ?')) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/admin/invitations/${invitationId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: adminAuthService.getAuthHeaders()
       });
 
       if (response.ok) {
@@ -124,11 +113,10 @@ const AdminInvitations = () => {
     if (!confirm(`Êtes-vous sûr de vouloir supprimer ${selectedIds.length} invitation(s) ?`)) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/admin/invitations/bulk-delete', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...adminAuthService.getAuthHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ ids: selectedIds })
