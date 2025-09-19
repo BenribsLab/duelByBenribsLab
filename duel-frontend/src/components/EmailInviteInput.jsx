@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import config from '../config';
 
 const EmailInviteInput = ({ onInvite, placeholder = "email@exemple.com" }) => {
   const [email, setEmail] = useState('');
@@ -44,36 +45,44 @@ const EmailInviteInput = ({ onInvite, placeholder = "email@exemple.com" }) => {
     setErrorMessage('');
 
     try {
-      // TODO: Vérifier si l'email existe déjà dans la base
-      // const response = await fetch(`/api/users/check-email?email=${encodeURIComponent(email)}`);
-      // const data = await response.json();
-      
-      // Simulation temporaire
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simuler différents cas
-      const testCases = {
-        'existe@test.com': 'exists',
-        'invalide@test.com': 'invalid',
-        default: 'success'
-      };
-      
-      const result = testCases[email.toLowerCase()] || testCases.default;
-      
-      if (result === 'exists') {
-        setValidationStatus('exists');
-        setErrorMessage('Cette personne est déjà inscrite. Utilisez la recherche rapide.');
-      } else if (result === 'invalid') {
-        setValidationStatus('invalid');
-        setErrorMessage('Adresse email invalide ou domaine inexistant.');
-      } else {
-        setValidationStatus('valid');
-        onInvite(email);
-        setEmail('');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_BASE_URL}/invitations/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: email,
+          recipientName: null // Optionnel: on pourrait ajouter un champ nom plus tard
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409 && data.userExists) {
+          setValidationStatus('exists');
+          setErrorMessage(`${data.existingUser.pseudo} est déjà inscrit. Utilisez la recherche rapide.`);
+        } else if (response.status === 429) {
+          setValidationStatus('invalid');
+          setErrorMessage('Une invitation a déjà été envoyée récemment à cette adresse.');
+        } else {
+          setValidationStatus('invalid');
+          setErrorMessage(data.error || 'Erreur lors de l\'envoi de l\'invitation.');
+        }
+        return;
       }
+
+      // Succès
+      setValidationStatus('valid');
+      onInvite(email);
+      setEmail('');
+      
     } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'invitation:', error);
       setValidationStatus('invalid');
-      setErrorMessage('Erreur lors de la validation de l\'email.');
+      setErrorMessage('Erreur de connexion. Veuillez réessayer.');
     } finally {
       setIsValidating(false);
     }

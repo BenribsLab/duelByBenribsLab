@@ -31,6 +31,7 @@ model Dueliste {
   duelsRecus      Duel[]            @relation("DuelsRecus")
   duelsProvoques  Duel[]            @relation("DuelsProvoques")
   validations     ValidationScore[]
+  emailInvitations EmailInvitation[] @relation("EmailInvitations")
 
   @@map("duellistes")
 }
@@ -74,4 +75,17 @@ model ValidationScore {
 
   @@unique([matchId, duelisteId])
   @@map("validations_scores")
+}
+
+model EmailInvitation {
+  id            Int      @id @default(autoincrement())
+  email         String
+  recipientName String?
+  inviterId     Int
+  status        String   @default("SENT") // SENT, OPENED, REGISTERED, EXPIRED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  inviter       Dueliste @relation("EmailInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@map("email_invitations")
 }

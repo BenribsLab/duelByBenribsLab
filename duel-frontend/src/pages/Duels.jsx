@@ -690,10 +690,9 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
   // Gérer l'invitation par email
   const handleEmailInvite = async (email) => {
     try {
-      // TODO: Implémenter l'API d'invitation par email
       console.log('Invitation envoyée à:', email);
-      alert(`Invitation envoyée à ${email} !`);
-      // onDuelCreated(); // Optionnel: refresh des données
+      alert(`Invitation envoyée à ${email} avec succès !`);
+      // Optionnel: refresh des données ou afficher un message de succès
     } catch (error) {
       console.error('Erreur lors de l\'envoi de l\'invitation:', error);
       alert('Erreur lors de l\'envoi de l\'invitation');

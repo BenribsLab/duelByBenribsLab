@@ -342,6 +342,188 @@ class EmailService {
   }
 
   /**
+   * Envoyer un email d'invitation de duel
+   */
+  async sendInvitationEmail(recipientEmail, inviterName, inviterPseudo, recipientName = null) {
+    try {
+      const graphClient = await this.getGraphClient();
+      
+      const message = {
+        message: {
+          subject: `⚔️ ${inviterPseudo} vous invite à rejoindre Duel By Benribs Lab !`,
+          body: {
+            contentType: 'HTML',
+            content: this.generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName)
+          },
+          toRecipients: [
+            {
+              emailAddress: {
+                address: recipientEmail,
+                name: recipientName || recipientEmail
+              }
+            }
+          ],
+          from: {
+            emailAddress: {
+              address: this.senderEmail,
+              name: this.senderName
+            }
+          }
+        },
+        saveToSentItems: false
+      };
+
+      await graphClient.api(`/users/${this.senderEmail}/sendMail`).post(message);
+      
+      console.log(`Email d'invitation envoyé avec succès à ${recipientEmail} par ${inviterPseudo}`);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email d\'invitation:', error);
+      throw new Error('Impossible d\'envoyer l\'email d\'invitation');
+    }
+  }
+
+  /**
+   * Générer le contenu HTML de l'email d'invitation
+   */
+  generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName) {
+    const displayName = recipientName ? `Bonjour ${recipientName}` : 'Bonjour';
+    const appUrl = process.env.FRONTEND_URL || 'https://votre-app.com';
+    
+    return `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invitation Duel</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+          }
+          .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 20px;
+          }
+          .invitation-card {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .inviter {
+            font-size: 20px;
+            font-weight: bold;
+            color: #dc2626;
+            margin: 10px 0;
+          }
+          .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
+            transition: transform 0.2s;
+          }
+          .cta-button:hover {
+            transform: translateY(-2px);
+          }
+          .features {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">⚔️ Duel By Benribs Lab</div>
+            <h1 style="color: #1f2937; margin: 0;">Vous êtes invité(e) !</h1>
+          </div>
+          
+          <p>${displayName},</p>
+          
+          <div class="invitation-card">
+            <p style="margin: 0; font-size: 16px;">🏅 Vous avez été invité(e) par</p>
+            <div class="inviter">${inviterPseudo}</div>
+            <p style="margin: 0; color: #6b7280;">à rejoindre notre communauté d'escrimeurs !</p>
+          </div>
+          
+          <p>Rejoignez notre plateforme de gestion des duels d'escrime et commencez à défier d'autres escrimeurs !</p>
+          
+          <div style="text-align: center;">
+            <a href="${appUrl}/register?invitedBy=${encodeURIComponent(inviterPseudo)}" class="cta-button">
+              🎯 Rejoindre maintenant
+            </a>
+          </div>
+          
+          <div class="features">
+            <h3 style="color: #059669; margin-top: 0;">⚔️ Ce qui vous attend :</h3>
+            <ul style="margin: 10px 0;">
+              <li><strong>Gérez vos duels</strong> - Enregistrez vos combats et résultats</li>
+              <li><strong>Suivez votre progression</strong> - Consultez vos statistiques détaillées</li>
+              <li><strong>Classement en temps réel</strong> - Voyez votre position parmi les escrimeurs</li>
+              <li><strong>Défiez d'autres duellistes</strong> - Organisez vos prochains combats</li>
+              <li><strong>Communauté active</strong> - Rejoignez ${inviterPseudo} et d'autres passionnés</li>
+            </ul>
+          </div>
+          
+          <p>L'inscription est gratuite et ne prend que quelques minutes !</p>
+          
+          <div class="footer">
+            <p><strong>Duel By Benribs Lab</strong><br>
+            Système de gestion des duels d'escrime<br>
+            <a href="mailto:${this.senderEmail}" style="color: #3b82f6;">${this.senderEmail}</a></p>
+            
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">
+              Vous recevez cet email car ${inviterPseudo} vous a invité(e) à rejoindre notre plateforme.
+              Si vous ne souhaitez pas vous inscrire, vous pouvez ignorer cet email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
    * Tester la configuration email
    */
   async testEmailConfiguration() {

@@ -103,6 +103,7 @@ app.use('/api/duels', require('./routes/duels'));
 app.use('/api/classement', require('./routes/classement'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/invitations', require('./routes/invitations'));
 
 // Middleware de gestion d'erreurs
 app.use((err, req, res, _next) => {
