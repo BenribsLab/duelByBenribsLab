@@ -359,8 +359,8 @@ const AdminInvitations = () => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="text-xs space-y-1">
-                        {invitation.sentAt && (
-                          <div className="text-blue-600">📧 Envoyé: {formatDate(invitation.sentAt)}</div>
+                        {invitation.status !== 'PENDING' && (
+                          <div className="text-blue-600">📧 Envoyé: {formatDate(invitation.createdAt)}</div>
                         )}
                         {invitation.openedAt && (
                           <div className="text-green-600">👁️ Ouvert: {formatDate(invitation.openedAt)}</div>

@@ -105,8 +105,7 @@ router.post('/email', authenticateToken, async (req, res) => {
     await prisma.emailInvitation.update({
       where: { id: invitation.id },
       data: { 
-        status: 'SENT',
-        sentAt: new Date()
+        status: 'SENT'
       }
     });
 

@@ -292,7 +292,6 @@ router.post('/:id/resend', authenticateToken, async (req, res) => {
       where: { id: parseInt(id) },
       data: {
         status: 'SENT',
-        sentAt: new Date(),
         reminderSentAt: new Date()
       }
     });
