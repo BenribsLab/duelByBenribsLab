@@ -5,6 +5,7 @@ import adminService from '../services/adminService';
 import adminAuthService from '../services/adminAuthService';
 import AdminDuels from '../components/AdminDuels';
 import AdminSystem from '../components/AdminSystem';
+import AdminInvitations from './AdminInvitations';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -263,13 +264,7 @@ const Admin = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  if (tab.id === 'invitations') {
-                    navigate('/admin/invitations');
-                  } else {
-                    setActiveTab(tab.id);
-                  }
-                }}
+                onClick={() => setActiveTab(tab.id)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
@@ -687,6 +682,8 @@ const Admin = () => {
       )}
 
       {activeTab === 'duels' && <AdminDuels />}
+      
+      {activeTab === 'invitations' && <AdminInvitations />}
       
       {activeTab === 'stats' && (
         <div className="bg-white p-6 rounded-lg shadow">

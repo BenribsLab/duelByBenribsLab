@@ -10,7 +10,6 @@ import Duels from './pages/Duels';
 import Duellistes from './pages/Duellistes';
 import Admin from './pages/Admin';
 import AdminDuels from './components/AdminDuels';
-import AdminInvitations from './pages/AdminInvitations';
 import Parametres from './pages/Parametres';
 import AdminLogin from './components/AdminLogin';
 import Login from './pages/Login';
@@ -43,12 +42,6 @@ function App() {
           <Route path="/admin/duels" element={
             <AdminProtectedRoute>
               <AdminDuels />
-            </AdminProtectedRoute>
-          } />
-          
-          <Route path="/admin/invitations" element={
-            <AdminProtectedRoute>
-              <AdminInvitations />
             </AdminProtectedRoute>
           } />
           
