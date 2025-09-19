@@ -133,29 +133,10 @@ const Login = () => {
     setLoginMode('');
   };
 
-  // Fonction pour gérer le scroll quand le champ identifiant est focusé (seulement étape 1)
-  const handleIdentifierFocus = () => {
-    // Seulement pour l'étape 1 (identifiant)
-    if (step !== 1) return;
-    
-    // Attendre que le clavier virtuel apparaisse avant de scroller
-    setTimeout(() => {
-      // Scroller vers le bas de la page pour libérer de l'espace pour le bouton
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const scrollAmount = documentHeight - windowHeight + 100; // +100px de marge
-      
-      window.scrollTo({ 
-        top: scrollAmount, 
-        behavior: 'smooth' 
-      });
-    }, 300);
-  };
-
   // Étape 1: Saisie de l'identifiant
   if (step === 1) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 pt-12 px-4 sm:px-6 lg:px-8 pb-48">
         <div className="max-w-md w-full space-y-8">
           <div>
             <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
@@ -201,7 +182,6 @@ const Login = () => {
                   placeholder="Email ou pseudo"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  onFocus={handleIdentifierFocus}
                 />
               </div>
             </div>
@@ -233,7 +213,7 @@ const Login = () => {
   // Étape 2a: Saisie du mot de passe (pour les pseudos)
   if (step === 2 && loginMode === 'password') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 pt-12 px-4 sm:px-6 lg:px-8 pb-48">
         <div className="max-w-md w-full space-y-8">
           <div>
             <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
@@ -310,7 +290,7 @@ const Login = () => {
   // Étape 2b: Saisie du code OTP (pour les emails)
   if (step === 2 && loginMode === 'otp') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 pt-12 px-4 sm:px-6 lg:px-8 pb-48">
         <div className="max-w-md w-full space-y-8">
           <div>
             <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
