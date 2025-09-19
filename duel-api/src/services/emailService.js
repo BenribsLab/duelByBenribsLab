@@ -389,7 +389,7 @@ class EmailService {
   generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId = null) {
     const displayName = recipientName ? `Bonjour ${recipientName}` : 'Bonjour';
     const appUrl = process.env.FRONTEND_URL || 'https://duel.benribs.fr';
-    const apiUrl = process.env.API_URL || 'http://duel-api.benribs.fr';
+    const apiUrl = process.env.API_URL || 'http://api-duel.benribs.fr';
     
     // URLs avec tracking si on a un ID d'invitation
     const trackingPixelUrl = invitationId ? `${apiUrl}/api/track/email-open/${invitationId}` : null;
