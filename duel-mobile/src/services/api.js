@@ -43,6 +43,17 @@ export const classementService = {
   getJunior: () => api.get('/classement/junior'),
 };
 
+export const invitationsService = {
+  send: (invitationData) => {
+    const token = localStorage.getItem('token');
+    return api.post('/invitations/email', invitationData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  }
+};
+
 // Services d'administration
 export const adminService = {
   // Authentification admin

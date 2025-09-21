@@ -1,125 +1,151 @@
-import { PushNotifications } from "@capacitor/push-notifications"
-import config from "../config"
+import { PushNotifications } from "@capacitor/push-notifications";
+import config from "../config";
+import secureStorage from "./secureStorage";
 
 class PushNotificationService {
   constructor() {
-    this.token = null
-    this.isInitialized = false
-    this.navigationCallback = null
+    this.token = null;
+    this.isInitialized = false;
+    this.navigationCallback = null;
   }
 
-  // Méthode pour définir la fonction de navigation
   setNavigationCallback(navigate) {
-    this.navigationCallback = navigate
+    this.navigationCallback = navigate;
   }
 
   async init() {
-    if (this.isInitialized) return
+    if (this.isInitialized) {
+      console.log("Service notifications deja initialise");
+      return;
+    }
 
     try {
-      await this.requestPermission()
-      this.setupListeners()
-      this.isInitialized = true
+      console.log("INIT NOTIFICATIONS - Debut");
+      await this.requestPermission();
+      await this.setupListeners();
+      this.isInitialized = true;
+      console.log("INIT NOTIFICATIONS - Succes");
     } catch (error) {
-      console.error("Erreur lors de l initialisation des notifications:", error)
+      console.error("INIT NOTIFICATIONS - Erreur:", error);
     }
   }
 
   async requestPermission() {
     try {
-      const permission = await PushNotifications.requestPermissions()
+      console.log("PERMISSION - Demande permission");
+      const permission = await PushNotifications.requestPermissions();
+      console.log("PERMISSION - Reponse:", permission);
+
       if (permission.receive === "granted") {
-        await PushNotifications.register()
+        console.log("PERMISSION - Enregistrement...");
+        await PushNotifications.register();
+        console.log("PERMISSION - Enregistrement termine");
       } else {
-        console.warn("Permission refusee:", permission)
+        console.warn("PERMISSION - Refusee:", permission);
       }
     } catch (error) {
-      console.error("Erreur lors de la demande de permission:", error)
+      console.error("PERMISSION - Erreur:", error);
     }
   }
 
-  setupListeners() {
-    PushNotifications.addListener("registration", (token) => {
-      console.log("Token FCM recu:", token.value)
-      this.token = token.value
-      this.sendTokenToServer(token.value)
-    })
+  async setupListeners() {
+    await PushNotifications.addListener("registration", (token) => {
+      console.log("Token FCM recu:", token.value);
+      this.token = token.value;
+      this.sendTokenToServer(token.value);
+    });
 
-    PushNotifications.addListener("registrationError", (error) => {
-      console.error("Erreur d enregistrement:", error)
-    })
+    await PushNotifications.addListener("registrationError", (error) => {
+      console.error("Erreur enregistrement:", error);
+    });
 
-    PushNotifications.addListener("pushNotificationReceived", (notification) => {
-      console.log("NOTIFICATION RECUE APP OUVERTE:", notification)
-      console.log("DETAILS NOTIFICATION:", JSON.stringify(notification, null, 2))
-    })
+    await PushNotifications.addListener("pushNotificationReceived", (notification) => {
+      console.log("Notification recue (app ouverte):", notification);
+      console.log("Details notification:", JSON.stringify(notification, null, 2));
+    });
 
-    PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-      console.log("NOTIFICATION CLIQUEE:", action)
-      console.log("DETAILS ACTION:", JSON.stringify(action, null, 2))
-      
-      // Récupérer les données de navigation de la notification
-      const notificationData = action.notification.data
-      console.log("DONNEES NOTIFICATION:", notificationData)
-      
-      if (notificationData && notificationData.link && this.navigationCallback) {
-        console.log("NAVIGATION VERS:", notificationData.link)
-        this.navigationCallback(notificationData.link)
+    await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+      console.log("Notification cliquee:", action);
+      console.log("Details action:", JSON.stringify(action, null, 2));
+
+      const notificationData = action.notification.data;
+      console.log("Donnees notification:", notificationData);
+
+      if (notificationData?.link && this.navigationCallback) {
+        console.log("Navigation vers:", notificationData.link);
+        this.navigationCallback(notificationData.link);
       }
-    })
+    });
   }
 
   async sendTokenToServer(token) {
     try {
-      const userData = JSON.parse(localStorage.getItem("user") || "{}")
-      if (!userData.id) return
+      console.log("TOKEN - Envoi au serveur:", token);
+      const userData = await secureStorage.getUserData();
+      const authToken = await secureStorage.getAuthToken();
+
+      console.log("TOKEN - User data:", userData ? "present" : "absent");
+      console.log("TOKEN - Auth token:", authToken ? "present" : "absent");
+
+      if (!userData || !authToken) {
+        console.log("TOKEN - Pas d utilisateur connecte ou token manquant");
+        return;
+      }
+
+      console.log("TOKEN - User ID:", userData.id);
+      if (!userData.id) return;
 
       const response = await fetch(`${config.API_BASE_URL}/users/${userData.id}/push-token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          "Authorization": `Bearer ${authToken}`
         },
         body: JSON.stringify({
           pushToken: token,
           platform: "android"
         })
-      })
+      });
 
+      console.log("TOKEN - Reponse serveur:", response.status);
       if (response.ok) {
-        console.log("Token envoye au serveur")
+        console.log("TOKEN - Envoye au serveur avec succes");
       } else {
-        console.warn("Erreur lors de l envoi du token au serveur")
+        console.warn("TOKEN - Erreur lors de l envoi au serveur");
       }
     } catch (error) {
-      console.error("Erreur envoi token:", error)
+      console.error("TOKEN - Erreur envoi token:", error);
     }
   }
 
   async unregister() {
     try {
-      const userData = JSON.parse(localStorage.getItem("user") || "{}")
-      if (userData.id) {
-        await fetch(`${config.API_BASE_URL}/users/${userData.id}/push-token`, {
-          method: "DELETE",
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
-          }
-        })
+      const userData = await secureStorage.getUserData();
+      const authToken = await secureStorage.getAuthToken();
+
+      if (userData && authToken) {
+        if (userData.id) {
+          await fetch(`${config.API_BASE_URL}/users/${userData.id}/push-token`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${authToken}`
+            }
+          });
+        }
       }
 
-      await PushNotifications.removeAllListeners()
-      this.token = null
-      this.isInitialized = false
+      await PushNotifications.removeAllListeners();
+      this.token = null;
+      this.isInitialized = false;
     } catch (error) {
-      console.error("Erreur lors de la desinscription:", error)
+      console.error("Erreur desinscription:", error);
     }
   }
 
   getToken() {
-    return this.token
+    return this.token;
   }
 }
 
-export const pushNotificationService = new PushNotificationService()
-export default pushNotificationService
+export const pushNotificationService = new PushNotificationService();
+export default pushNotificationService;

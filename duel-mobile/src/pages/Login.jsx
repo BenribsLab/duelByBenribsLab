@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -14,12 +14,25 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loginMode, setLoginMode] = useState(''); // 'password' ou 'otp'
   
+  // Ref pour l'auto-focus du champ mot de passe
+  const passwordInputRef = useRef(null);
+  
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
   // URL de redirection après connexion
   const from = location.state?.from?.pathname || '/dashboard';
+
+  // Auto-focus sur le champ mot de passe quand on arrive à l'étape 2
+  useEffect(() => {
+    if (step === 2 && loginMode === 'password' && passwordInputRef.current) {
+      // Petit délai pour s'assurer que le DOM est mis à jour
+      setTimeout(() => {
+        passwordInputRef.current.focus();
+      }, 100);
+    }
+  }, [step, loginMode]);
 
   // Étape 1: Vérifier l'identifiant et déterminer le mode de connexion
   const handleIdentifierSubmit = async (e) => {
@@ -43,7 +56,7 @@ const Login = () => {
             setStep(2);
           } else {
             // L'utilisateur a été connecté directement (cas peu probable sans password)
-            login(response.data.data.user, response.data.data.token);
+            await login(response.data.data.user, response.data.data.token);
             navigate(from, { replace: true });
           }
         } else {
@@ -80,22 +93,42 @@ const Login = () => {
     setIsLoading(true);
     setError('');
 
+    console.log('🔐 === DÉBUT CONNEXION PASSWORD ===');
+    console.log('🔐 Identifiant:', identifier);
+    console.log('🔐 Mot de passe:', password ? `${password.length} caractères` : 'VIDE');
+
     try {
+      console.log('📡 Envoi requête API...');
       const response = await axios.post(`${config.API_BASE_URL}/auth/login`, {
         pseudo: identifier,
         password: password
       });
       
+      console.log('📡 Réponse API reçue:', {
+        status: response.status,
+        success: response.data.success,
+        hasUser: !!response.data.data?.user,
+        hasToken: !!response.data.data?.token
+      });
+      
       if (response.data.success) {
-        login(response.data.data.user, response.data.data.token);
+        console.log('✅ API Success - Appel login()...');
+        await login(response.data.data.user, response.data.data.token);
+        console.log('✅ Login terminé - Navigation...');
         navigate(from, { replace: true });
       } else {
+        console.error('❌ API Error:', response.data.error);
         setError(response.data.error || 'Pseudo ou mot de passe incorrect');
       }
     } catch (error) {
+      console.error('🔐 === ERREUR CONNEXION PASSWORD ===');
+      console.error('❌ Status:', error.response?.status);
+      console.error('❌ Data:', error.response?.data);
+      console.error('❌ Message:', error.message);
       setError(error.response?.data?.error || 'Pseudo ou mot de passe incorrect');
     } finally {
       setIsLoading(false);
+      console.log('🔐 === FIN CONNEXION PASSWORD ===');
     }
   };
 
@@ -112,7 +145,7 @@ const Login = () => {
       });
       
       if (response.data.success) {
-        login(response.data.data.user, response.data.data.token);
+        await login(response.data.data.user, response.data.data.token);
         navigate(from, { replace: true });
       } else {
         setError(response.data.error || 'Code OTP invalide');
@@ -178,6 +211,7 @@ const Login = () => {
                   name="identifier"
                   type="text"
                   required
+                  autoCapitalize="none"
                   className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                   placeholder="Email ou pseudo"
                   value={identifier}
@@ -264,6 +298,8 @@ const Login = () => {
                   name="password"
                   type="password"
                   required
+                  autoCapitalize="none"
+                  ref={passwordInputRef}
                   className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                   placeholder="Mot de passe"
                   value={password}

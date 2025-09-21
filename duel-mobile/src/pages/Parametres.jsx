@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X, LogOut } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { duellistesService, uploadService } from '../services/api';
+import useBackButton from '../hooks/useBackButton';
 import Avatar from '../components/Avatar';
 
 const Parametres = () => {
@@ -13,6 +14,11 @@ const Parametres = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', content: '' });
+
+  // Gestion du bouton retour Android
+  useBackButton({
+    fallbackRoute: '/dashboard'
+  });
   const [initialData, setInitialData] = useState({});
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 

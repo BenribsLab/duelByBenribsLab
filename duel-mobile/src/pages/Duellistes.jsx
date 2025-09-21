@@ -3,6 +3,7 @@ import { Trophy, Target, Calendar, Award, Swords, Crown } from 'lucide-react';
 import { duellistesService, classementService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import useBackButton from '../hooks/useBackButton';
 import Avatar from '../components/Avatar';
 
 const Duellistes = () => {
@@ -11,6 +12,11 @@ const Duellistes = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // Gestion du bouton retour Android
+  useBackButton({
+    fallbackRoute: '/dashboard'
+  });
 
   // Fonction pour défier un joueur
   const handleChallenge = (adversaireId) => {
@@ -80,7 +86,7 @@ const Duellistes = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Duellistes</h1>
         <p className="text-gray-600">Tous les membres inscrits</p>
@@ -105,10 +111,23 @@ const Duellistes = () => {
               
               {/* Infos joueur */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-gray-900 truncate">
-                  {dueliste.pseudo}
-                </h3>
-                <div className="flex items-center space-x-3 mt-1">
+                {/* Ligne pseudo + bouton défier */}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 truncate flex-1 mr-3">
+                    {dueliste.pseudo}
+                  </h3>
+                  <button
+                    onClick={() => handleChallenge(dueliste.id)}
+                    disabled={dueliste.id === user?.id}
+                    className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-colors flex-shrink-0"
+                  >
+                    <Swords className="h-3 w-3" />
+                    <span>{dueliste.id === user?.id ? 'Vous' : 'Défier'}</span>
+                  </button>
+                </div>
+                
+                {/* Stats du joueur */}
+                <div className="flex items-center space-x-3">
                   {/* Victoires */}
                   <div className="flex items-center text-green-600">
                     <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -141,18 +160,6 @@ const Duellistes = () => {
                     </div>
                   )}
                 </div>
-              </div>
-              
-              {/* Bouton défier */}
-              <div className="flex-shrink-0">
-                <button
-                  onClick={() => handleChallenge(dueliste.id)}
-                  disabled={dueliste.id === user?.id}
-                  className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1 transition-colors"
-                >
-                  <Swords className="h-4 w-4" />
-                  <span>{dueliste.id === user?.id ? 'Vous' : 'Défier'}</span>
-                </button>
               </div>
             </div>
           );

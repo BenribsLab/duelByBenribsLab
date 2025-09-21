@@ -1,5 +1,6 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   Swords, 
   Trophy, 
@@ -13,6 +14,16 @@ import {
 } from 'lucide-react';
 
 const Home = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Si l'utilisateur est connecté, rediriger vers le dashboard
+    if (!loading && user) {
+      console.log('Utilisateur connecté détecté, redirection vers dashboard...');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, loading, navigate]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}

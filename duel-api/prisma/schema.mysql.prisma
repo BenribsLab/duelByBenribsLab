@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url      = "mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 }
 
 model Dueliste {
@@ -24,12 +24,15 @@ model Dueliste {
   nbMatchsTotal   Int               @default(0)
   indiceTouches   Int               @default(0)
   categorie       String            @default("SENIOR")
+  pushToken       String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   duelsArbires    Duel[]            @relation("DuelsArbires")
   duelsRecus      Duel[]            @relation("DuelsRecus")
   duelsProvoques  Duel[]            @relation("DuelsProvoques")
   validations     ValidationScore[]
+  emailInvitations EmailInvitation[] @relation("EmailInvitations")
+  registeredFromInvitations EmailInvitation[] @relation("RegisteredFromInvitation")
 
   @@map("duellistes")
 }
@@ -73,4 +76,35 @@ model ValidationScore {
 
   @@unique([matchId, duelisteId])
   @@map("validations_scores")
+}
+
+model EmailInvitation {
+  id               Int      @id @default(autoincrement())
+  email            String
+  recipientName    String?
+  inviterId        Int
+  status           String   @default("SENT") // SENT, OPENED, CLICKED, REGISTERED, EXPIRED
+  
+  // Tracking des événements
+  openedAt         DateTime?  // Quand l'email a été ouvert
+  clickedAt        DateTime?  // Quand le lien a été cliqué
+  registeredAt     DateTime?  // Quand la personne s'est inscrite
+  registeredUserId Int?       // ID du nouvel utilisateur créé
+  expiresAt        DateTime?  // Expiration 30 jours (géré en code)
+  reminderSentAt   DateTime?  // Quand un rappel a été envoyé
+  
+  // Métadonnées pour analytics
+  userAgent        String?    // Navigateur utilisé
+  ipAddress        String?    // IP anonymisée (3 premiers octets)
+  referer          String?    // D'où vient le clic
+  
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  inviter          Dueliste @relation("EmailInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+  registeredUser   Dueliste? @relation("RegisteredFromInvitation", fields: [registeredUserId], references: [id], onDelete: SetNull)
+
+  @@map("email_invitations")
 }

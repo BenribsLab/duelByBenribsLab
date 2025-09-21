@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../database');
 
 /**
  * Récupérer tous les duels pour l'admin (avec pagination et filtres)

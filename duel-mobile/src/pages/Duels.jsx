@@ -1,9 +1,12 @@
 import { useState, useEffect, useContext } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Swords, Calendar, Check, X, Trophy, AlertCircle } from 'lucide-react';
-import { duelsService, duellistesService } from '../services/api';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Swords, Calendar, Check, X, Trophy, AlertCircle, Search, Mail, Users, ExternalLink } from 'lucide-react';
+import { duelsService, duellistesService, invitationsService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import useBackButton from '../hooks/useBackButton';
 import ScoreModal from '../components/ScoreModal';
+import MemberSearchInput from '../components/MemberSearchInput';
+import EmailInviteInput from '../components/EmailInviteInput';
 
 const Duels = () => {
   const location = useLocation();
@@ -16,6 +19,11 @@ const Duels = () => {
     const urlParams = new URLSearchParams(location.search);
     const tabParam = urlParams.get('tab');
     const adversaireParam = urlParams.get('adversaire');
+    
+    // Si on vient de la route /nouveau-duel, aller directement au formulaire de création
+    if (location.pathname === '/nouveau-duel') {
+      return 'nouveau-duel';
+    }
     
     // Si un adversaire est spécifié dans l'URL, aller directement au formulaire de création
     if (adversaireParam) {
@@ -35,6 +43,19 @@ const Duels = () => {
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [selectedDuel, setSelectedDuel] = useState(null);
   const { user } = useContext(AuthContext);
+
+  // Gestion du bouton retour Android
+  useBackButton({
+    onBack: () => {
+      // Si on est dans le formulaire nouveau-duel, revenir aux onglets
+      if (activeTab === 'nouveau-duel') {
+        setActiveTab('invitations-recues');
+      } else {
+        // Sinon utiliser le comportement par défaut (vers dashboard)
+        navigate('/dashboard');
+      }
+    }
+  });
 
   // Mettre à jour l'onglet actif quand la route ou les paramètres changent
   useEffect(() => {
@@ -617,10 +638,12 @@ const Duels = () => {
   );
 };
 
-// Composant pour créer un nouveau duel
+// Composant pour créer un nouveau duel avec 3 modes d'invitation
 const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
   const { user } = useContext(AuthContext);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [activeAction, setActiveAction] = useState(null); // null, 'search', 'list', 'email'
   const [formData, setFormData] = useState({
     adversaireId: '',
     notes: '',
@@ -638,20 +661,29 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
         ...prev,
         adversaireId: adversaireParam
       }));
+      setActiveAction('search'); // Mode recherche si adversaire pré-sélectionné
+    } else {
+      setActiveAction(null); // Afficher les boutons de choix
     }
   }, [location.search]);
 
-  const handleSubmit = async (e) => {
+  const handleMemberSelected = (member) => {
+    setFormData(prev => ({
+      ...prev,
+      adversaireId: member ? member.id : ''
+    }));
+  };
+
+  const handleDuelSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
       const duelData = {
-        provocateurId: user.id, // Ajouter l'ID de l'utilisateur connecté
+        provocateurId: user.id,
         adversaireId: parseInt(formData.adversaireId),
       };
 
-      // Ajouter les champs optionnels seulement s'ils ont une valeur
       if (formData.notes.trim()) {
         duelData.notes = formData.notes.trim();
       }
@@ -660,7 +692,6 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
         duelData.dateProgrammee = formData.dateProgrammee.trim();
       }
 
-      console.log('Création de duel avec les données:', duelData);
       await duelsService.create(duelData);
       setFormData({ adversaireId: '', notes: '', dateProgrammee: '' });
       onDuelCreated();
@@ -672,80 +703,222 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
     }
   };
 
+  const handleEmailInvite = async (inviteData) => {
+    try {
+      await invitationsService.send({
+        email: inviteData.email,
+        recipientName: inviteData.recipientName
+      });
+      // Le message de succès est géré par EmailInviteInput
+    } catch (error) {
+      // L'erreur est gérée par EmailInviteInput
+      throw error;
+    }
+  };
+
+  const actionButtons = [
+    {
+      id: 'search',
+      label: 'Rechercher un membre',
+      icon: Search,
+      description: 'Trouvez un duelliste par son pseudo',
+      color: 'blue'
+    },
+    {
+      id: 'list',
+      label: 'Choisir dans la liste',
+      icon: Users,
+      description: 'Parcourir tous les membres',
+      color: 'green'
+    },
+    {
+      id: 'email',
+      label: 'Inviter par email',
+      icon: Mail,
+      description: 'Envoyer une invitation par email',
+      color: 'purple'
+    }
+  ];
+
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Défier un adversaire</h3>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="adversaire" className="block text-sm font-medium text-gray-700">
-            Adversaire
-          </label>
-          <select
-            id="adversaire"
-            value={formData.adversaireId}
-            onChange={(e) => setFormData({ ...formData, adversaireId: e.target.value })}
-            required
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Choisir un adversaire</option>
-            {duellistes
-              .filter(dueliste => dueliste.id !== user.id) // Filtrer l'utilisateur connecté
-              .map((dueliste) => (
-              <option key={dueliste.id} value={dueliste.id}>
-                {dueliste.pseudo} ({dueliste.nbVictoires}V / {dueliste.nbDefaites}D)
-              </option>
-            ))}
-          </select>
+    <div className="space-y-6">
+      {/* Affichage des boutons d'action ou interface active */}
+      {activeAction === null ? (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-6 text-center">Comment souhaitez-vous inviter ?</h3>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {actionButtons.map((action) => {
+              const Icon = action.icon;
+              const colorClasses = {
+                blue: 'bg-blue-50 border-blue-200 hover:border-blue-300 hover:bg-blue-100',
+                green: 'bg-green-50 border-green-200 hover:border-green-300 hover:bg-green-100',
+                purple: 'bg-purple-50 border-purple-200 hover:border-purple-300 hover:bg-purple-100'
+              };
+              const iconColorClasses = {
+                blue: 'text-blue-600',
+                green: 'text-green-600',
+                purple: 'text-purple-600'
+              };
+              
+              return (
+                <button
+                  key={action.id}
+                  onClick={() => setActiveAction(action.id)}
+                  className={`p-6 rounded-xl border-2 transition-all text-left ${colorClasses[action.color]}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg bg-white shadow-sm`}>
+                      <Icon className={`h-6 w-6 ${iconColorClasses[action.color]}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 text-lg">
+                        {action.label}
+                      </div>
+                      <div className="text-gray-600 text-sm mt-1">
+                        {action.description}
+                      </div>
+                    </div>
+                    <ExternalLink className="h-5 w-5 text-gray-400" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-            Message (optionnel)
-          </label>
-          <textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            rows={3}
-            placeholder="Ajouter un message avec votre défi..."
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-            Date souhaitée (optionnel)
-          </label>
-          <input
-            type="datetime-local"
-            id="date"
-            value={formData.dateProgrammee}
-            onChange={(e) => setFormData({ ...formData, dateProgrammee: e.target.value })}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        <div className="flex justify-end">
+      ) : (
+        <div className="bg-white shadow rounded-lg p-6">
+          {/* Bouton retour */}
           <button
-            type="submit"
-            disabled={submitting || !formData.adversaireId}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setActiveAction(null)}
+            className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
-            {submitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Envoi en cours...
-              </>
-            ) : (
-              <>
-                <Swords className="h-4 w-4 mr-2" />
-                Lancer le Défi
-              </>
-            )}
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Retour aux options</span>
           </button>
+
+          {/* Mode Recherche */}
+          {activeAction === 'search' && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <Search className="h-5 w-5 inline mr-2" />
+                Rechercher un duelliste
+              </h3>
+              
+              <div className="space-y-4">
+                <MemberSearchInput
+                  onMemberSelected={handleMemberSelected}
+                  selectedMemberId={formData.adversaireId}
+                />
+
+                {formData.adversaireId && (
+                  <form onSubmit={handleDuelSubmit} className="space-y-4 pt-4 border-t border-gray-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Message (optionnel)
+                      </label>
+                      <textarea
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        rows={3}
+                        placeholder="Ajouter un message avec votre défi..."
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date souhaitée (optionnel)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={formData.dateProgrammee}
+                        onChange={(e) => setFormData({ ...formData, dateProgrammee: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <Swords className="h-5 w-5" />
+                      <span>{submitting ? 'Envoi...' : 'Envoyer le défi'}</span>
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mode Liste des duellistes */}
+          {activeAction === 'list' && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  <Users className="h-5 w-5 inline mr-2" />
+                  Choisir un adversaire
+                </h3>
+                <button
+                  onClick={() => navigate('/duellistes')}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Voir la page complète
+                </button>
+              </div>
+              
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {duellistes
+                  .filter(dueliste => dueliste.id !== user.id)
+                  .slice(0, 10) // Limiter à 10 pour la vue mobile
+                  .map((dueliste) => (
+                    <button
+                      key={dueliste.id}
+                      onClick={() => {
+                        setFormData({ ...formData, adversaireId: dueliste.id });
+                        setActiveAction('search'); // Revenir au mode recherche avec l'adversaire sélectionné
+                      }}
+                      className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{dueliste.pseudo}</div>
+                          <div className="text-sm text-gray-500">
+                            {dueliste.nbVictoires}V / {dueliste.nbDefaites}D
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            {dueliste.points} pts
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            #{dueliste.position || '?'}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mode Invitation par email */}
+          {activeAction === 'email' && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <Mail className="h-5 w-5 inline mr-2" />
+                Inviter par email
+              </h3>
+              
+              <EmailInviteInput onInviteSent={handleEmailInvite} />
+            </div>
+          )}
         </div>
-      </form>
+      )}
     </div>
   );
 };

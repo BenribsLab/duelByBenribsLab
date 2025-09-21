@@ -84,6 +84,12 @@ const Dashboard = () => {
     return index !== -1 ? index + 1 : 'N/A';
   };
 
+  // Fonction pour tronquer le pseudo si trop long
+  const truncatePseudo = (pseudo) => {
+    if (!pseudo) return '';
+    return pseudo.length > 8 ? pseudo.substring(0, 7) + '...' : pseudo;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -95,9 +101,9 @@ const Dashboard = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* En-tête du dashboard */}
-      <div>
+      <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Aperçu de votre activité et du classement</p>
+        <p className="text-xl font-bold text-purple-600 mt-3">En garde, {user?.pseudo || user?.username || 'Utilisateur'} ! ⚔️</p>
       </div>
 
         {/* Statistiques rapides */}
@@ -158,11 +164,11 @@ const Dashboard = () => {
               <table className="min-w-full table-auto">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Pseudo</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">V/D</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Indice</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-16">#</th>
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Pseudo</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-16">V/D</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">IND</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">PTS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -177,7 +183,11 @@ const Dashboard = () => {
                           {index + 1}
                         </div>
                       </td>
-                      <td className="py-2 px-3 text-sm font-medium text-gray-900">{dueliste.pseudo}</td>
+                      <td className="py-2 px-3 text-sm font-medium text-gray-900 whitespace-nowrap w-20">
+                        {dueliste.pseudo && dueliste.pseudo.length > 8 
+                          ? dueliste.pseudo.substring(0, 7) + '...' 
+                          : dueliste.pseudo}
+                      </td>
                       <td className="py-2 px-3 text-center text-sm text-gray-600">
                         <span className="text-green-600 font-medium">{dueliste.nbVictoires}</span>
                         /
@@ -207,11 +217,11 @@ const Dashboard = () => {
                 <table className="min-w-full table-auto">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Pseudo</th>
-                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">V/D</th>
-                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Indice</th>
-                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-16">#</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Pseudo</th>
+                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-16">V/D</th>
+                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">IND</th>
+                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">PTS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -226,7 +236,11 @@ const Dashboard = () => {
                             {index + 1}
                           </div>
                         </td>
-                        <td className="py-2 px-3 text-sm font-medium text-gray-900">{dueliste.pseudo}</td>
+                        <td className="py-2 px-3 text-sm font-medium text-gray-900 whitespace-nowrap w-20">
+                          {dueliste.pseudo && dueliste.pseudo.length > 8 
+                            ? dueliste.pseudo.substring(0, 7) + '...' 
+                            : dueliste.pseudo}
+                        </td>
                         <td className="py-2 px-3 text-center text-sm text-gray-600">
                           <span className="text-green-600 font-medium">{dueliste.nbVictoires}</span>
                           /

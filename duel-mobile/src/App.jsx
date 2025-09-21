@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import pushNotificationService from './services/pushNotificationService';
+import useBackButton from './hooks/useBackButton';
 
 // Import des pages depuis le frontend
 import Home from './pages/Home';
@@ -16,15 +17,28 @@ import Parametres from './pages/Parametres';
 // Composants
 import ProtectedRoute from './components/ProtectedRoute';
 import MobileLayout from './components/MobileLayout';
+import SplashScreen from './components/SplashScreen';
 
 // Composant interne pour gérer la navigation
 function AppContent() {
   const navigate = useNavigate();
+  const { loading, isInitializing } = useAuth();
+
+  // Gestion globale du bouton retour Android
+  useBackButton({
+    fallbackRoute: '/dashboard',
+    preventExit: false
+  });
 
   useEffect(() => {
     // Configurer la navigation pour les notifications push
     pushNotificationService.setNavigationCallback(navigate);
   }, [navigate]);
+
+  // Afficher l'écran de chargement pendant l'initialisation
+  if (loading || isInitializing) {
+    return <SplashScreen />;
+  }
 
   return (
     <div className="App min-h-screen bg-gray-50">
