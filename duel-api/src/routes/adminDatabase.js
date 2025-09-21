@@ -19,6 +19,15 @@ router.get('/config', localhostOnly, async (req, res) => {
   try {
     const config = databaseConfigService.getCurrentConfig();
     
+    // Debug: afficher les variables d'environnement et la config
+    console.log('🔍 Variables d\'environnement DB:');
+    console.log('  DB_PROVIDER:', process.env.DB_PROVIDER);
+    console.log('  DB_HOST:', process.env.DB_HOST);
+    console.log('  DB_USER:', process.env.DB_USER);
+    console.log('  DB_NAME:', process.env.DB_NAME);
+    console.log('  DB_PORT:', process.env.DB_PORT);
+    console.log('🔍 Config retournée:', config);
+    
     // Pour localhost, inclure les variables d'environnement MySQL pour permettre les tests
     const responseData = { ...config };
     
