@@ -126,9 +126,7 @@ class DatabaseConfigService {
           port: parseInt(port) || 3306, 
           user: username, 
           password, 
-          database,
-          connectTimeout: 5000,
-          acquireTimeout: 5000
+          database
         });
         await conn.execute('SELECT 1');
         await conn.end();
@@ -192,9 +190,7 @@ class DatabaseConfigService {
           port: parseInt(port) || 3306,
           user: username,
           password: password,
-          database: database,
-          connectTimeout: 5000,
-          acquireTimeout: 5000
+          database: database
         });
         
         const [rows] = await connection.execute('SHOW TABLES');
@@ -273,9 +269,7 @@ class DatabaseConfigService {
           port: parseInt(port) || 3306,
           user: username,
           password: password,
-          database: database,
-          connectTimeout: 5000,
-          acquireTimeout: 5000
+          database: database
         });
         
         // Compter les enregistrements dans chaque table
@@ -616,9 +610,7 @@ class DatabaseConfigService {
         port: parseInt(port),
         user: username,
         password,
-        database,
-        connectTimeout: 5000,
-        acquireTimeout: 5000
+        database
       });
       
       console.log('✅ Connexion MySQL établie pour l\'insertion');
@@ -674,10 +666,11 @@ class DatabaseConfigService {
         console.log(`📊 ${duellistes.length} duellistes trouvés`);
         
         if (duellistes.length > 0) {
-          await this.insertDataToMySQL(connection, 'duellistes', duellistes, mode);
-          totalRecords += duellistes.length;
-          migrationDetails.duellistes = duellistes.length;
-          console.log(`✅ ${duellistes.length} duellistes migrés`);
+          const result = await this.insertDataToMySQL(connection, 'duellistes', duellistes, mode);
+          const actualInserted = result.affectedRows;
+          totalRecords += actualInserted;
+          migrationDetails.duellistes = actualInserted;
+          console.log(`✅ ${actualInserted} duellistes réellement migrés (${duellistes.length} trouvés)`);
         }
         
         // Duels
@@ -686,10 +679,11 @@ class DatabaseConfigService {
         console.log(`📊 ${duels.length} duels trouvés`);
         
         if (duels.length > 0) {
-          await this.insertDataToMySQL(connection, 'duels', duels, mode);
-          totalRecords += duels.length;
-          migrationDetails.duels = duels.length;
-          console.log(`✅ ${duels.length} duels migrés`);
+          const result = await this.insertDataToMySQL(connection, 'duels', duels, mode);
+          const actualInserted = result.affectedRows;
+          totalRecords += actualInserted;
+          migrationDetails.duels = actualInserted;
+          console.log(`✅ ${actualInserted} duels réellement migrés (${duels.length} trouvés)`);
         }
         
         // Validations scores
@@ -698,10 +692,11 @@ class DatabaseConfigService {
         console.log(`📊 ${validations.length} validations trouvées`);
         
         if (validations.length > 0) {
-          await this.insertDataToMySQL(connection, 'validations_scores', validations, mode);
-          totalRecords += validations.length;
-          migrationDetails.validations_scores = validations.length;
-          console.log(`✅ ${validations.length} validations migrées`);
+          const result = await this.insertDataToMySQL(connection, 'validations_scores', validations, mode);
+          const actualInserted = result.affectedRows;
+          totalRecords += actualInserted;
+          migrationDetails.validations_scores = actualInserted;
+          console.log(`✅ ${actualInserted} validations réellement migrées (${validations.length} trouvées)`);
         }
         
         // Email invitations (si la table existe)
@@ -711,10 +706,11 @@ class DatabaseConfigService {
           console.log(`📊 ${invitations.length} invitations trouvées`);
           
           if (invitations.length > 0) {
-            await this.insertDataToMySQL(connection, 'email_invitations', invitations, mode);
-            totalRecords += invitations.length;
-            migrationDetails.email_invitations = invitations.length;
-            console.log(`✅ ${invitations.length} invitations migrées`);
+            const result = await this.insertDataToMySQL(connection, 'email_invitations', invitations, mode);
+            const actualInserted = result.affectedRows;
+            totalRecords += actualInserted;
+            migrationDetails.email_invitations = actualInserted;
+            console.log(`✅ ${actualInserted} invitations réellement migrées (${invitations.length} trouvées)`);
           }
         } catch (invitationError) {
           console.log('⚠️ Table EmailInvitation non disponible, ignorée');
@@ -757,17 +753,18 @@ class DatabaseConfigService {
    * @param {string} mode - Mode d'insertion: 'merge' ou 'replace'
    */
   async insertDataToMySQL(connection, tableName, data, mode = 'merge') {
-    if (!data || data.length === 0) return;
+    if (!data || data.length === 0) return { affectedRows: 0 };
     
-    // Obtenir les colonnes du premier objet
-    const columns = Object.keys(data[0]);
+    // Obtenir les colonnes du premier objet SANS les IDs auto-générés
+    const allColumns = Object.keys(data[0]);
+    const columns = allColumns.filter(col => col !== 'id'); // EXCLURE les IDs !
     const columnsList = columns.join(', ');
     
     // Créer les placeholders (?, ?, ?) pour chaque ligne
     const placeholderRow = '(' + columns.map(() => '?').join(', ') + ')';
     const placeholders = data.map(() => placeholderRow).join(', ');
     
-    // Préparer les valeurs
+    // Préparer les valeurs SANS les IDs
     const values = [];
     data.forEach(row => {
       columns.forEach(col => {
@@ -776,11 +773,20 @@ class DatabaseConfigService {
     });
     
     // Choisir le type d'insertion selon le mode
-    const insertType = mode === 'merge' ? 'INSERT IGNORE' : 'INSERT';
+    let query;
+    if (mode === 'merge') {
+      // Mode fusion : on met à jour si l'enregistrement existe déjà (basé sur pseudo/email)
+      const updateClauses = columns.map(col => `${col} = VALUES(${col})`).join(', ');
+      query = `INSERT INTO ${tableName} (${columnsList}) VALUES ${placeholders} ON DUPLICATE KEY UPDATE ${updateClauses}`;
+    } else {
+      // Mode replace : insertion simple (la table a été vidée avant)
+      query = `INSERT INTO ${tableName} (${columnsList}) VALUES ${placeholders}`;
+    }
     
-    // Exécuter l'insertion
-    const query = `${insertType} INTO ${tableName} (${columnsList}) VALUES ${placeholders}`;
-    await connection.execute(query, values);
+    console.log(`🔧 Exécution de la requête pour ${tableName}:`, query.substring(0, 100) + '...');
+    const result = await connection.execute(query, values);
+    console.log(`✅ Résultat insertion ${tableName}:`, result[0].affectedRows, 'lignes affectées');
+    return result[0];
   }
 
   // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase
