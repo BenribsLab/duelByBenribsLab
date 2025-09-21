@@ -226,8 +226,8 @@ class DatabaseConfigService {
       return {
         success: true,
         data: {
-          existing: existingTables,
-          missing: missingTables,
+          existingTables: existingTables,
+          missingTables: missingTables,
           allTablesExist: missingTables.length === 0
         }
       };
