@@ -1,8 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-
-const prisma = new PrismaClient();
 
 /**
  * Service d'administration pour la gestion des utilisateurs
