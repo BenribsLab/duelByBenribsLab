@@ -79,11 +79,20 @@ class DatabaseConfigService {
 
   buildDatabaseUrl(config) {
     const { provider, host, port, database, username, password } = config;
+    
+    // Utiliser la même logique que les autres fonctions qui marchent
+    const validPort = parseInt(port) || (provider === 'mysql' ? 3306 : 5432);
+    
+    // S'assurer que tous les paramètres sont définis
+    if (!host || !database || !username) {
+      throw new Error(`Paramètres manquants pour ${provider}: host=${host}, database=${database}, username=${username}`);
+    }
+    
     switch (provider) {
       case 'mysql':
-        return `mysql://${username}:${password}@${host}:${port || 3306}/${database}`;
+        return `mysql://${username}:${password || ''}@${host}:${validPort}/${database}`;
       case 'postgresql':
-        return `postgresql://${username}:${password}@${host}:${port || 5432}/${database}?schema=public`;
+        return `postgresql://${username}:${password || ''}@${host}:${validPort}/${database}?schema=public`;
       default:
         return 'file:./prisma/dev.db';
     }
@@ -346,8 +355,19 @@ class DatabaseConfigService {
         const { promisify } = require('util');
         const execAsync = promisify(exec);
         
+        // Debug: afficher la config reçue et l'URL construite
+        console.log('🔍 Config reçue pour migration:', {
+          provider: config.provider,
+          host: config.host,
+          port: config.port,
+          database: config.database,
+          username: config.username
+        });
+        
         // Mettre à jour DATABASE_URL dans l'environnement
-        process.env.DATABASE_URL = this.buildDatabaseUrl(config);
+        const newDatabaseUrl = this.buildDatabaseUrl(config);
+        console.log('🔗 Nouvelle DATABASE_URL:', newDatabaseUrl);
+        process.env.DATABASE_URL = newDatabaseUrl;
         
         console.log('🔧 Génération du client Prisma...');
         await execAsync('npx prisma generate');
