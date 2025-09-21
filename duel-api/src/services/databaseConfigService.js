@@ -318,6 +318,71 @@ class DatabaseConfigService {
     }
   }
 
+  async migrateDatabase(config) {
+    try {
+      console.log('🚀 Début de la migration vers', config.provider);
+      
+      // 1. Tester la connexion
+      const connectionTest = await this.testConnection(config);
+      if (!connectionTest.success) {
+        return connectionTest;
+      }
+      
+      // 2. Mettre à jour le schéma Prisma
+      const schemaUpdate = this.updatePrismaSchema(config.provider);
+      if (!schemaUpdate.success) {
+        return schemaUpdate;
+      }
+      
+      // 3. Sauvegarder la configuration
+      const configSave = await this.saveConfig(config);
+      if (!configSave.success) {
+        return configSave;
+      }
+      
+      // 4. Exécuter les commandes Prisma
+      try {
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        
+        // Mettre à jour DATABASE_URL dans l'environnement
+        process.env.DATABASE_URL = this.buildDatabaseUrl(config);
+        
+        console.log('🔧 Génération du client Prisma...');
+        await execAsync('npx prisma generate');
+        
+        console.log('🗄️ Application du schéma à la base de données...');
+        await execAsync('npx prisma db push --accept-data-loss');
+        
+        console.log('✅ Migration terminée avec succès');
+        
+        return {
+          success: true,
+          message: `Migration vers ${config.provider} réussie`,
+          data: {
+            provider: config.provider,
+            database: config.database
+          }
+        };
+        
+      } catch (prismaError) {
+        console.error('❌ Erreur Prisma:', prismaError);
+        return {
+          success: false,
+          message: `Erreur Prisma: ${prismaError.message}`
+        };
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la migration:', error);
+      return {
+        success: false,
+        message: `Erreur lors de la migration: ${error.message}`
+      };
+    }
+  }
+
   // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase, finalizeMigration
   // (elles peuvent rester identiques, mais assure-toi de supprimer les doublons et de placer chaque fonction une seule fois).
 }
