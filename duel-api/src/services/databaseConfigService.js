@@ -598,9 +598,9 @@ class DatabaseConfigService {
       
       let totalRecords = 0;
       
-      // 3. Lister les modèles et leurs tables mappées depuis le schéma
-      const mysqlSchemaPath = path.join(process.cwd(), 'prisma', 'schema.mysql.prisma');
-      const schemaContent = fs.readFileSync(mysqlSchemaPath, 'utf8');
+      // 3. Lister les modèles et leurs tables mappées depuis le schéma SQLite ACTUEL
+      const currentSchemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
+      const schemaContent = fs.readFileSync(currentSchemaPath, 'utf8');
       
       // Extraire les modèles et leurs tables mappées
       const models = [];
@@ -614,7 +614,7 @@ class DatabaseConfigService {
         });
       }
       
-      console.log('📋 Modèles à migrer:', models);
+      console.log('📋 Modèles à migrer depuis SQLite:', models);
       
       // 4. Pour chaque modèle, copier les données
       for (const model of models) {
