@@ -329,72 +329,251 @@ class DatabaseConfigService {
 
   async migrateDatabase(config) {
     try {
-      console.log('🚀 Début de la migration vers', config.provider);
+      console.log('🚀 Début de la migration des données vers', config.provider);
       
-      // 1. Tester la connexion
+      // 1. Créer le verrou de migration pour empêcher les changements de schéma automatiques
+      const migrationLockPath = path.join(process.cwd(), 'prisma', 'migration.lock');
+      fs.writeFileSync(migrationLockPath, `Migration started at: ${new Date().toISOString()}\nTarget: ${config.provider}`, 'utf8');
+      console.log('🔒 Verrou de migration créé');
+      
+      // 2. Tester la connexion à la base cible
       const connectionTest = await this.testConnection(config);
       if (!connectionTest.success) {
+        // Supprimer le verrou en cas d'échec
+        if (fs.existsSync(migrationLockPath)) {
+          fs.unlinkSync(migrationLockPath);
+        }
         return connectionTest;
       }
       
-      // 2. Mettre à jour le schéma Prisma
-      const schemaUpdate = this.updatePrismaSchema(config.provider);
-      if (!schemaUpdate.success) {
-        return schemaUpdate;
+      // 3. Vérifier/créer les tables sur la base cible
+      const tablesCheck = await this.checkTablesExist(config);
+      if (!tablesCheck.success) {
+        // Supprimer le verrou en cas d'échec
+        if (fs.existsSync(migrationLockPath)) {
+          fs.unlinkSync(migrationLockPath);
+        }
+        return tablesCheck;
       }
       
-      // 3. Sauvegarder la configuration
-      const configSave = await this.saveConfig(config);
-      if (!configSave.success) {
-        return configSave;
-      }
-      
-      // 4. Exécuter les commandes Prisma
-      try {
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
-        
-        // Mettre à jour DATABASE_URL dans l'environnement
-        const newDatabaseUrl = this.buildDatabaseUrl(config);
-        console.log('🔗 Migration vers:', newDatabaseUrl);
-        process.env.DATABASE_URL = newDatabaseUrl;
-        
-        console.log('🔧 Génération du client Prisma...');
-        await execAsync('npx prisma generate');
-        
-        console.log('🗄️ Application du schéma à la base de données...');
-        await execAsync('npx prisma db push --accept-data-loss');
-        
-        console.log('✅ Migration terminée avec succès');
-        
-        return {
-          success: true,
-          message: `Migration vers ${config.provider} réussie`,
-          data: {
-            provider: config.provider,
-            database: config.database
+      if (!tablesCheck.data.allTablesExist) {
+        const createResult = await this.createTables(config);
+        if (!createResult.success) {
+          // Supprimer le verrou en cas d'échec
+          if (fs.existsSync(migrationLockPath)) {
+            fs.unlinkSync(migrationLockPath);
           }
-        };
-        
-      } catch (prismaError) {
-        console.error('❌ Erreur Prisma:', prismaError);
-        return {
-          success: false,
-          message: `Erreur Prisma: ${prismaError.message}`
-        };
+          return createResult;
+        }
       }
       
+      // 4. Migrer les données depuis SQLite vers la nouvelle base
+      console.log('📦 Migration des données...');
+      const dataMigrationResult = await this.copyDataFromSQLite(config);
+      
+      if (!dataMigrationResult.success) {
+        // Supprimer le verrou en cas d'échec
+        if (fs.existsSync(migrationLockPath)) {
+          fs.unlinkSync(migrationLockPath);
+        }
+        return dataMigrationResult;
+      }
+      
+      console.log('✅ Migration des données terminée avec succès');
+      console.log('⚠️ IMPORTANT: Vous devez maintenant finaliser la migration pour changer la configuration');
+      
+      return {
+        success: true,
+        message: `Migration des données vers ${config.provider} réussie. Finalisez maintenant la migration.`,
+        data: {
+          provider: config.provider,
+          database: config.database,
+          recordsMigrated: dataMigrationResult.data?.recordsMigrated || 0,
+          migrationLockActive: true
+        }
+      };
+        
     } catch (error) {
-      console.error('❌ Erreur lors de la migration:', error);
+      console.error('❌ Erreur lors de la migration des données:', error);
+      
+      // Supprimer le verrou en cas d'erreur
+      const migrationLockPath = path.join(process.cwd(), 'prisma', 'migration.lock');
+      if (fs.existsSync(migrationLockPath)) {
+        fs.unlinkSync(migrationLockPath);
+        console.log('🔓 Verrou de migration supprimé après erreur');
+      }
+      
       return {
         success: false,
-        message: `Erreur lors de la migration: ${error.message}`
+        message: `Erreur lors de la migration des données: ${error.message}`
       };
     }
   }
 
-  // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase, finalizeMigration
+  /**
+   * Finaliser la migration en changeant le schéma Prisma et la configuration
+   * Cette fonction doit être appelée APRÈS que les données aient été migrées avec succès
+   */
+  async finalizeMigration(newConfig) {
+    console.log('🔄 Début de la finalisation de la migration...');
+    
+    try {
+      // 1. Copier le schéma MySQL en place du schéma SQLite
+      console.log('📋 Copie du schéma MySQL...');
+      const schemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
+      const mysqlSchemaPath = path.join(process.cwd(), 'prisma', 'schema.mysql.prisma');
+      
+      if (!fs.existsSync(mysqlSchemaPath)) {
+        throw new Error('Le fichier schema.mysql.prisma est introuvable');
+      }
+      
+      // Sauvegarde du schéma SQLite actuel
+      const sqliteBackupPath = path.join(process.cwd(), 'prisma', 'schema.sqlite.backup.prisma');
+      if (fs.existsSync(schemaPath)) {
+        fs.copyFileSync(schemaPath, sqliteBackupPath);
+        console.log('✅ Sauvegarde du schéma SQLite créée');
+      }
+      
+      // Copie du schéma MySQL
+      fs.copyFileSync(mysqlSchemaPath, schemaPath);
+      console.log('✅ Schéma MySQL copié en place');
+      
+      // 2. Construire la nouvelle URL de base de données
+      const databaseUrl = this.buildDatabaseUrl(newConfig);
+      console.log('🔗 URL construite:', databaseUrl.replace(/:[^:@]*@/, ':***@')); // Masquer le mot de passe dans les logs
+      
+      // 3. Mettre à jour les variables d'environnement
+      console.log('⚙️ Mise à jour de la configuration...');
+      process.env.DB_PROVIDER = newConfig.provider;
+      process.env.DATABASE_URL = databaseUrl;
+      process.env.DB_HOST = newConfig.host;
+      process.env.DB_PORT = newConfig.port;
+      process.env.DB_NAME = newConfig.database;
+      process.env.DB_USER = newConfig.username;
+      process.env.DB_PASS = newConfig.password;
+      
+      // 4. Mettre à jour le fichier .env si on n'est pas dans Docker
+      const isDocker = fs.existsSync('/.dockerenv');
+      if (!isDocker) {
+        console.log('📝 Mise à jour du fichier .env...');
+        this.updateEnvFile({
+          DB_PROVIDER: newConfig.provider,
+          DATABASE_URL: databaseUrl,
+          DB_HOST: newConfig.host,
+          DB_PORT: newConfig.port,
+          DB_NAME: newConfig.database,
+          DB_USER: newConfig.username,
+          DB_PASS: newConfig.password
+        });
+      }
+      
+      // 5. Générer le client Prisma avec le nouveau schéma
+      console.log('🔧 Génération du client Prisma...');
+      try {
+        if (isDocker) {
+          // Dans Docker, utiliser npx prisma generate directement
+          execSync('cd /app && npx prisma generate', { 
+            stdio: 'pipe',
+            encoding: 'utf-8'
+          });
+        } else {
+          execSync('npx prisma generate', { 
+            stdio: 'pipe',
+            encoding: 'utf-8',
+            cwd: process.cwd()
+          });
+        }
+        console.log('✅ Client Prisma généré avec succès');
+      } catch (generateError) {
+        console.warn('⚠️ Erreur lors de la génération du client Prisma:', generateError.message);
+        // Ne pas échouer complètement car le redémarrage peut résoudre ce problème
+      }
+      
+      // 6. Supprimer le verrou de migration
+      const migrationLockPath = path.join(process.cwd(), 'prisma', 'migration.lock');
+      if (fs.existsSync(migrationLockPath)) {
+        fs.unlinkSync(migrationLockPath);
+        console.log('🔓 Verrou de migration supprimé');
+      }
+      
+      // 7. Indiquer si un redémarrage est nécessaire
+      const needsRestart = isDocker || true; // Toujours recommander un redémarrage pour être sûr
+      
+      console.log('✅ Finalisation terminée avec succès');
+      
+      return {
+        success: true,
+        message: 'Migration finalisée avec succès. Le serveur va redémarrer...',
+        needsRestart: needsRestart,
+        newProvider: newConfig.provider
+      };
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la finalisation:', error);
+      
+      // En cas d'erreur, essayer de restaurer le schéma SQLite
+      try {
+        const schemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
+        const sqliteBackupPath = path.join(process.cwd(), 'prisma', 'schema.sqlite.backup.prisma');
+        
+        if (fs.existsSync(sqliteBackupPath)) {
+          fs.copyFileSync(sqliteBackupPath, schemaPath);
+          console.log('🔄 Schéma SQLite restauré après erreur');
+        }
+      } catch (restoreError) {
+        console.error('❌ Impossible de restaurer le schéma SQLite:', restoreError);
+      }
+      
+      return {
+        success: false,
+        message: `Erreur lors de la finalisation: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Mettre à jour le fichier .env avec de nouvelles valeurs
+   */
+  updateEnvFile(newVars) {
+    const envPath = path.join(process.cwd(), '.env');
+    let envContent = '';
+    
+    // Lire le fichier existant s'il existe
+    if (fs.existsSync(envPath)) {
+      envContent = fs.readFileSync(envPath, 'utf8');
+    }
+    
+    // Créer un objet avec toutes les variables
+    const envVars = {};
+    
+    // Parser les variables existantes
+    envContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          envVars[key] = valueParts.join('=');
+        }
+      }
+    });
+    
+    // Ajouter/mettre à jour les nouvelles variables
+    Object.keys(newVars).forEach(key => {
+      if (newVars[key] !== null && newVars[key] !== undefined) {
+        envVars[key] = newVars[key];
+      }
+    });
+    
+    // Reconstruire le contenu du fichier
+    const newContent = Object.keys(envVars)
+      .map(key => `${key}=${envVars[key]}`)
+      .join('\n') + '\n';
+    
+    fs.writeFileSync(envPath, newContent, 'utf8');
+    console.log('✅ Fichier .env mis à jour');
+  }
+
+  // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase
   // (elles peuvent rester identiques, mais assure-toi de supprimer les doublons et de placer chaque fonction une seule fois).
 }
 

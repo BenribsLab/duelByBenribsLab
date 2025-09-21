@@ -77,6 +77,14 @@ async function copySchemaFile() {
 async function initializeDatabase() {
   console.log('🚀 Initialisation de la base de données...');
   
+  // Vérifier si on est en cours de migration
+  // Si un fichier de verrouillage de migration existe, ne pas changer le schéma
+  const migrationLockPath = path.join(process.cwd(), 'prisma', 'migration.lock');
+  if (fs.existsSync(migrationLockPath)) {
+    console.log('🔒 Migration en cours détectée - schéma non modifié');
+    return;
+  }
+  
   // Copier le schéma approprié
   const schemaChanged = await copySchemaFile();
   
@@ -94,9 +102,12 @@ initializeDatabase().catch(console.error);
 // Fonction pour construire l'URL de base de données dynamiquement
 function buildDatabaseUrl() {
   const provider = process.env.DB_PROVIDER || 'sqlite';
+  console.log('🔍 buildDatabaseUrl - DB_PROVIDER:', provider);
   
   if (provider === 'sqlite') {
-    return process.env.SQLITE_URL || 'file:./prisma/dev.db';
+    const url = process.env.SQLITE_URL || 'file:./prisma/dev.db';
+    console.log('🔍 buildDatabaseUrl - SQLite URL:', url);
+    return url;
   } else if (provider === 'mysql') {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || '3306';
@@ -104,15 +115,18 @@ function buildDatabaseUrl() {
     const username = process.env.DB_USER || 'root';
     const password = process.env.DB_PASS || '';
     
-    return `mysql://${username}:${password}@${host}:${port}/${database}`;
+    const url = `mysql://${username}:${password}@${host}:${port}/${database}`;
+    console.log('🔍 buildDatabaseUrl - MySQL URL:', url);
+    return url;
   }
   
   // Fallback pour SQLite
+  console.log('🔍 buildDatabaseUrl - Fallback SQLite');
   return 'file:./prisma/dev.db';
 }
 
 // Construire l'URL et l'assigner à DATABASE_URL pour Prisma
-// process.env.DATABASE_URL = buildDatabaseUrl(); // TEMPORAIREMENT DÉSACTIVÉ
+process.env.DATABASE_URL = buildDatabaseUrl();
 
 // Configuration du client Prisma
 const prisma = new PrismaClient({
