@@ -580,8 +580,22 @@ class DatabaseConfigService {
     console.log('📦 Début de la copie des données depuis SQLite...');
     
     try {
-      // 1. Se connecter à SQLite (source)
-      const sqliteDb = new sqlite3.Database('./prisma/dev.db');
+      // 1. Se connecter à SQLite (source) - utiliser la vraie URL SQLite actuelle
+      const currentConfig = this.getCurrentConfig();
+      let sqliteDbPath;
+      
+      if (currentConfig.provider === 'sqlite') {
+        // Extraire le chemin depuis l'URL SQLite
+        const sqliteUrl = currentConfig.url || process.env.DATABASE_URL || 'file:./prisma/dev.db';
+        sqliteDbPath = sqliteUrl.replace('file:', '');
+        console.log('🔍 Chemin SQLite actuel:', sqliteDbPath);
+      } else {
+        // Si on n'est pas sur SQLite, utiliser le chemin par défaut
+        sqliteDbPath = './prisma/dev.db';
+        console.log('🔍 Utilisation du chemin SQLite par défaut:', sqliteDbPath);
+      }
+      
+      const sqliteDb = new sqlite3.Database(sqliteDbPath);
       
       // 2. Créer une connexion vers la base cible
       const targetUrl = this.buildDatabaseUrl(targetConfig);
