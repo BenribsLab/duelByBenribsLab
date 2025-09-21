@@ -355,18 +355,9 @@ class DatabaseConfigService {
         const { promisify } = require('util');
         const execAsync = promisify(exec);
         
-        // Debug: afficher la config reçue et l'URL construite
-        console.log('🔍 Config reçue pour migration:', {
-          provider: config.provider,
-          host: config.host,
-          port: config.port,
-          database: config.database,
-          username: config.username
-        });
-        
         // Mettre à jour DATABASE_URL dans l'environnement
         const newDatabaseUrl = this.buildDatabaseUrl(config);
-        console.log('🔗 Nouvelle DATABASE_URL:', newDatabaseUrl);
+        console.log('🔗 Migration vers:', newDatabaseUrl);
         process.env.DATABASE_URL = newDatabaseUrl;
         
         console.log('🔧 Génération du client Prisma...');

@@ -112,7 +112,7 @@ function buildDatabaseUrl() {
 }
 
 // Construire l'URL et l'assigner à DATABASE_URL pour Prisma
-process.env.DATABASE_URL = buildDatabaseUrl();
+// process.env.DATABASE_URL = buildDatabaseUrl(); // TEMPORAIREMENT DÉSACTIVÉ
 
 // Configuration du client Prisma
 const prisma = new PrismaClient({
