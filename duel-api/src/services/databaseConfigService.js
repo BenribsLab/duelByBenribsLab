@@ -623,8 +623,12 @@ class DatabaseConfigService {
           
           // Lire les données depuis SQLite en utilisant le nom de table mappé
           const rows = await new Promise((resolve, reject) => {
-            sqliteDb.all(`SELECT * FROM "${model.tableName}"`, (err, rows) => {
+            const query = `SELECT * FROM "${model.tableName}"`;
+            console.log(`🔍 Exécution de la requête: ${query}`);
+            
+            sqliteDb.all(query, (err, rows) => {
               if (err) {
+                console.log(`❌ Erreur SQL: ${err.message}`);
                 if (err.message.includes('no such table')) {
                   console.log(`⚠️ Table ${model.tableName} n'existe pas dans SQLite - ignorée`);
                   resolve([]);
@@ -632,6 +636,10 @@ class DatabaseConfigService {
                   reject(err);
                 }
               } else {
+                console.log(`✅ Requête réussie, ${rows.length} lignes trouvées`);
+                if (rows.length > 0) {
+                  console.log(`📄 Première ligne:`, JSON.stringify(rows[0], null, 2));
+                }
                 resolve(rows);
               }
             });
