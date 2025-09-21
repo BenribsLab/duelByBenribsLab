@@ -583,8 +583,8 @@ class DatabaseConfigService {
       // 1. Utiliser Prisma pour lire depuis SQLite (comme l'admin le fait)
       const { PrismaClient } = require('@prisma/client');
       
-      // Le client Prisma actuel (SQLite) - utiliser directement prisma depuis database.js
-      const prisma = require('../database');
+      // Le client Prisma actuel (SQLite) - extraire prisma depuis l'objet exporté
+      const { prisma } = require('../database');
       
       // 2. Créer une connexion vers la base cible
       const targetUrl = this.buildDatabaseUrl(targetConfig);
