@@ -586,17 +586,27 @@ class DatabaseConfigService {
       // Le client Prisma actuel (SQLite) - extraire prisma depuis l'objet exporté
       const { prisma } = require('../database');
       
-      // 2. Créer une connexion vers la base cible
+      // 2. Créer une connexion directe vers MySQL pour l'insertion
+      const mysql = require('mysql2/promise');
       const targetUrl = this.buildDatabaseUrl(targetConfig);
       
-      // Créer un client Prisma temporaire pour la base cible
-      const targetPrisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: targetUrl
-          }
-        }
+      // Extraire les paramètres de connexion
+      const urlMatch = targetUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      if (!urlMatch) {
+        throw new Error('Format d\'URL MySQL invalide');
+      }
+      
+      const [, username, password, host, port, database] = urlMatch;
+      
+      const connection = await mysql.createConnection({
+        host,
+        port: parseInt(port),
+        user: username,
+        password,
+        database
       });
+      
+      console.log('✅ Connexion MySQL établie pour l\'insertion');
       
       let totalRecords = 0;
       
@@ -610,10 +620,7 @@ class DatabaseConfigService {
         console.log(`📊 ${duellistes.length} duellistes trouvés`);
         
         if (duellistes.length > 0) {
-          await targetPrisma.dueliste.createMany({
-            data: duellistes,
-            skipDuplicates: true
-          });
+          await this.insertDataToMySQL(connection, 'duellistes', duellistes);
           totalRecords += duellistes.length;
           console.log(`✅ ${duellistes.length} duellistes migrés`);
         }
@@ -624,10 +631,7 @@ class DatabaseConfigService {
         console.log(`📊 ${duels.length} duels trouvés`);
         
         if (duels.length > 0) {
-          await targetPrisma.duel.createMany({
-            data: duels,
-            skipDuplicates: true
-          });
+          await this.insertDataToMySQL(connection, 'duels', duels);
           totalRecords += duels.length;
           console.log(`✅ ${duels.length} duels migrés`);
         }
@@ -638,10 +642,7 @@ class DatabaseConfigService {
         console.log(`📊 ${validations.length} validations trouvées`);
         
         if (validations.length > 0) {
-          await targetPrisma.validationScore.createMany({
-            data: validations,
-            skipDuplicates: true
-          });
+          await this.insertDataToMySQL(connection, 'validations_scores', validations);
           totalRecords += validations.length;
           console.log(`✅ ${validations.length} validations migrées`);
         }
@@ -653,10 +654,7 @@ class DatabaseConfigService {
           console.log(`📊 ${invitations.length} invitations trouvées`);
           
           if (invitations.length > 0) {
-            await targetPrisma.emailInvitation.createMany({
-              data: invitations,
-              skipDuplicates: true
-            });
+            await this.insertDataToMySQL(connection, 'email_invitations', invitations);
             totalRecords += invitations.length;
             console.log(`✅ ${invitations.length} invitations migrées`);
           }
@@ -670,7 +668,7 @@ class DatabaseConfigService {
       }
       
       // 4. Fermer les connexions
-      await targetPrisma.$disconnect();
+      await connection.end();
       
       console.log(`✅ Migration terminée - ${totalRecords} enregistrements copiés au total`);
       
@@ -690,6 +688,33 @@ class DatabaseConfigService {
         message: `Erreur lors de la copie des données: ${error.message}`
       };
     }
+  }
+
+  /**
+   * Insérer des données dans MySQL de façon dynamique
+   */
+  async insertDataToMySQL(connection, tableName, data) {
+    if (!data || data.length === 0) return;
+    
+    // Obtenir les colonnes du premier objet
+    const columns = Object.keys(data[0]);
+    const columnsList = columns.join(', ');
+    
+    // Créer les placeholders (?, ?, ?) pour chaque ligne
+    const placeholderRow = '(' + columns.map(() => '?').join(', ') + ')';
+    const placeholders = data.map(() => placeholderRow).join(', ');
+    
+    // Préparer les valeurs
+    const values = [];
+    data.forEach(row => {
+      columns.forEach(col => {
+        values.push(row[col]);
+      });
+    });
+    
+    // Exécuter l'insertion
+    const query = `INSERT IGNORE INTO ${tableName} (${columnsList}) VALUES ${placeholders}`;
+    await connection.execute(query, values);
   }
 
   // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase
