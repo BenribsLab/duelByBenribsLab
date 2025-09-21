@@ -580,45 +580,14 @@ class DatabaseConfigService {
     console.log('📦 Début de la copie des données depuis SQLite...');
     
     try {
-      // 1. Se connecter à SQLite (source) - utiliser la vraie URL SQLite actuelle
-      const currentConfig = this.getCurrentConfig();
-      console.log('🔍 Configuration actuelle:', JSON.stringify(currentConfig, null, 2));
+      // 1. Utiliser Prisma pour lire depuis SQLite (comme l'admin le fait)
+      const { PrismaClient } = require('@prisma/client');
       
-      let sqliteDbPath;
-      
-      if (currentConfig.provider === 'sqlite') {
-        // Extraire le chemin depuis l'URL SQLite
-        const sqliteUrl = currentConfig.url || process.env.DATABASE_URL || 'file:./prisma/dev.db';
-        sqliteDbPath = sqliteUrl.replace('file:', '');
-        console.log('🔍 Chemin SQLite actuel:', sqliteDbPath);
-      } else {
-        // Si on n'est pas sur SQLite, utiliser le chemin par défaut
-        sqliteDbPath = './prisma/dev.db';
-        console.log('🔍 Utilisation du chemin SQLite par défaut:', sqliteDbPath);
-      }
-      
-      // Vérifier si le fichier existe
-      if (!fs.existsSync(sqliteDbPath)) {
-        console.error('❌ Fichier SQLite introuvable:', sqliteDbPath);
-        throw new Error(`Fichier SQLite introuvable: ${sqliteDbPath}`);
-      }
-      
-      console.log('✅ Fichier SQLite trouvé, taille:', fs.statSync(sqliteDbPath).size, 'bytes');
-      
-      const sqliteDb = new sqlite3.Database(sqliteDbPath);
-      
-      // Test rapide pour lister les tables existantes
-      const existingTables = await new Promise((resolve, reject) => {
-        sqliteDb.all("SELECT name FROM sqlite_master WHERE type='table'", (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows.map(row => row.name));
-        });
-      });
-      console.log('📋 Tables existantes dans SQLite:', existingTables);
+      // Le client Prisma actuel (SQLite)
+      const currentPrisma = require('../database');
       
       // 2. Créer une connexion vers la base cible
       const targetUrl = this.buildDatabaseUrl(targetConfig);
-      const { PrismaClient } = require('@prisma/client');
       
       // Créer un client Prisma temporaire pour la base cible
       const targetPrisma = new PrismaClient({
@@ -631,84 +600,76 @@ class DatabaseConfigService {
       
       let totalRecords = 0;
       
-      // 3. Lister les modèles et leurs tables mappées depuis le schéma SQLite ACTUEL
-      const currentSchemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
-      const schemaContent = fs.readFileSync(currentSchemaPath, 'utf8');
+      console.log('📋 Migration des modèles Prisma...');
       
-      // Extraire les modèles et leurs tables mappées
-      const models = [];
-      const modelRegex = /model\s+(\w+)\s*{[^}]*@@map\("([^"]+)"\)/g;
-      let match;
-      
-      while ((match = modelRegex.exec(schemaContent)) !== null) {
-        models.push({
-          modelName: match[1],
-          tableName: match[2]
-        });
-      }
-      
-      console.log('📋 Modèles à migrer depuis SQLite:', models);
-      
-      // 4. Pour chaque modèle, copier les données
-      for (const model of models) {
-        try {
-          console.log(`📦 Migration du modèle ${model.modelName} (table: ${model.tableName})`);
-          
-          // Lire les données depuis SQLite en utilisant le nom de table mappé
-          const rows = await new Promise((resolve, reject) => {
-            const query = `SELECT * FROM "${model.tableName}"`;
-            console.log(`🔍 Exécution de la requête: ${query}`);
-            
-            sqliteDb.all(query, (err, rows) => {
-              if (err) {
-                console.log(`❌ Erreur SQL: ${err.message}`);
-                if (err.message.includes('no such table')) {
-                  console.log(`⚠️ Table ${model.tableName} n'existe pas dans SQLite - ignorée`);
-                  resolve([]);
-                } else {
-                  reject(err);
-                }
-              } else {
-                console.log(`✅ Requête réussie, ${rows.length} lignes trouvées`);
-                if (rows.length > 0) {
-                  console.log(`📄 Première ligne:`, JSON.stringify(rows[0], null, 2));
-                }
-                resolve(rows);
-              }
-            });
+      // 3. Migrer chaque modèle un par un
+      try {
+        // Duellistes
+        console.log('📦 Migration des duellistes...');
+        const duellistes = await currentPrisma.dueliste.findMany();
+        console.log(`📊 ${duellistes.length} duellistes trouvés`);
+        
+        if (duellistes.length > 0) {
+          await targetPrisma.dueliste.createMany({
+            data: duellistes,
+            skipDuplicates: true
           });
+          totalRecords += duellistes.length;
+          console.log(`✅ ${duellistes.length} duellistes migrés`);
+        }
+        
+        // Duels
+        console.log('📦 Migration des duels...');
+        const duels = await currentPrisma.duel.findMany();
+        console.log(`📊 ${duels.length} duels trouvés`);
+        
+        if (duels.length > 0) {
+          await targetPrisma.duel.createMany({
+            data: duels,
+            skipDuplicates: true
+          });
+          totalRecords += duels.length;
+          console.log(`✅ ${duels.length} duels migrés`);
+        }
+        
+        // Validations scores
+        console.log('📦 Migration des validations scores...');
+        const validations = await currentPrisma.validationScore.findMany();
+        console.log(`📊 ${validations.length} validations trouvées`);
+        
+        if (validations.length > 0) {
+          await targetPrisma.validationScore.createMany({
+            data: validations,
+            skipDuplicates: true
+          });
+          totalRecords += validations.length;
+          console.log(`✅ ${validations.length} validations migrées`);
+        }
+        
+        // Email invitations (si la table existe)
+        try {
+          console.log('📦 Migration des email invitations...');
+          const invitations = await currentPrisma.emailInvitation.findMany();
+          console.log(`📊 ${invitations.length} invitations trouvées`);
           
-          if (rows.length === 0) {
-            console.log(`📋 Table ${model.tableName} vide - ignorée`);
-            continue;
-          }
-          
-          console.log(`📦 ${rows.length} enregistrements trouvés dans ${model.tableName}`);
-          
-          // Utiliser le nom du modèle en minuscule pour Prisma
-          const prismaModelName = model.modelName.toLowerCase();
-          
-          // Insérer les données dans la base cible via Prisma
-          if (targetPrisma[prismaModelName]) {
-            // Utiliser createMany si le modèle existe
-            await targetPrisma[prismaModelName].createMany({
-              data: rows,
+          if (invitations.length > 0) {
+            await targetPrisma.emailInvitation.createMany({
+              data: invitations,
               skipDuplicates: true
             });
-            totalRecords += rows.length;
-            console.log(`✅ ${rows.length} enregistrements migrés pour ${model.tableName}`);
-          } else {
-            console.warn(`⚠️ Modèle ${prismaModelName} non trouvé dans Prisma - table ${model.tableName} ignorée`);
+            totalRecords += invitations.length;
+            console.log(`✅ ${invitations.length} invitations migrées`);
           }
-          
-        } catch (tableError) {
-          console.warn(`⚠️ Erreur lors de la migration de ${model.modelName}:`, tableError.message);
-          // Continuer avec les autres tables
+        } catch (invitationError) {
+          console.log('⚠️ Table EmailInvitation non disponible, ignorée');
         }
+        
+      } catch (migrationError) {
+        console.error('❌ Erreur pendant la migration:', migrationError);
+        throw migrationError;
       }
       
-      // 5. Fermer les connexions
-      sqliteDb.close();
+      // 4. Fermer les connexions
       await targetPrisma.$disconnect();
       
       console.log(`✅ Migration terminée - ${totalRecords} enregistrements copiés au total`);
@@ -718,7 +679,7 @@ class DatabaseConfigService {
         message: `Migration réussie - ${totalRecords} enregistrements copiés`,
         data: {
           recordsMigrated: totalRecords,
-          tablesProcessed: models.length
+          modelsProcessed: 4
         }
       };
       
