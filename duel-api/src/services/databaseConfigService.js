@@ -31,9 +31,23 @@ class DatabaseConfigService {
   
   /**
    * Obtenir la configuration actuelle de la base de données
-   * Lit directement le fichier .env pour avoir la config réelle
+   * Lit directement les variables d'environnement (Docker ou .env)
    */
   getCurrentConfig() {
+    // En premier, essayer de lire les variables d'environnement (Docker)
+    if (process.env.DB_PROVIDER || process.env.DATABASE_URL) {
+      return {
+        provider: process.env.DB_PROVIDER || 'sqlite',
+        url: process.env.DATABASE_URL || process.env.SQLITE_URL || 'file:./dev.db',
+        host: process.env.DB_HOST || null,
+        port: process.env.DB_PORT || null,
+        database: process.env.DB_NAME || null,
+        username: process.env.DB_USER || null,
+        password: process.env.DB_PASS || null
+      };
+    }
+
+    // Fallback: essayer de lire le fichier .env local
     const envPath = path.join(process.cwd(), '.env');
     
     try {

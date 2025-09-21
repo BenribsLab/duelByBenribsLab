@@ -16,8 +16,16 @@ async function runPrismaCommands() {
     console.log('✅ Client Prisma généré');
     
     console.log(`🗄️ Synchronisation de la base de données ${provider.toUpperCase()}...`);
-    const { stdout: pushOutput } = await execAsync('npx prisma db push --force-reset');
-    console.log('✅ Base de données synchronisée');
+    
+    // Essayer d'abord migrate deploy pour préserver les données
+    try {
+      await execAsync('npx prisma migrate deploy');
+      console.log('✅ Migrations appliquées avec succès');
+    } catch (migrateError) {
+      console.log('⚠️ Migrate deploy échoué, utilisation de db push...');
+      await execAsync('npx prisma db push --accept-data-loss --skip-seed');
+      console.log('✅ Base de données synchronisée avec db push');
+    }
     
   } catch (error) {
     console.error('❌ Erreur lors des commandes Prisma:', error.message);
