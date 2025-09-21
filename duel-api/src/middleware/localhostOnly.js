@@ -12,7 +12,8 @@ const localhostOnly = (req, res, next) => {
   const allowedIPs = [
     '127.0.0.1',
     '::1',
-    'localhost'
+    'localhost',
+    '82.65.187.244'  // IP du serveur benribs.fr
   ];
   
   // Vérifier si l'IP est localhost OU si c'est une requête interne du serveur
