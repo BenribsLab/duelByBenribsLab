@@ -241,6 +241,83 @@ class DatabaseConfigService {
     }
   }
 
+  async checkTablesContent(config) {
+    const { provider, host, port, database, username, password } = config;
+    
+    try {
+      const expectedTables = this.getExpectedTablesFromSchema();
+      const tablesContent = {};
+      
+      if (provider === 'mysql') {
+        const mysql = require('mysql2/promise');
+        const connection = await mysql.createConnection({
+          host: host,
+          port: parseInt(port) || 3306,
+          user: username,
+          password: password,
+          database: database,
+          timeout: 5000
+        });
+        
+        // Compter les enregistrements dans chaque table
+        for (const table of expectedTables) {
+          try {
+            const [rows] = await connection.execute(`SELECT COUNT(*) as count FROM ${table}`);
+            tablesContent[table] = rows[0].count;
+          } catch (error) {
+            tablesContent[table] = 0; // Table n'existe pas ou est vide
+          }
+        }
+        
+        await connection.end();
+        
+      } else if (provider === 'postgresql') {
+        const { Client } = require('pg');
+        const client = new Client({
+          host: host,
+          port: parseInt(port) || 5432,
+          user: username,
+          password: password,
+          database: database,
+          connectionTimeoutMillis: 5000
+        });
+        
+        await client.connect();
+        
+        // Compter les enregistrements dans chaque table
+        for (const table of expectedTables) {
+          try {
+            const result = await client.query(`SELECT COUNT(*) as count FROM "${table}"`);
+            tablesContent[table] = parseInt(result.rows[0].count);
+          } catch (error) {
+            tablesContent[table] = 0; // Table n'existe pas ou est vide
+          }
+        }
+        
+        await client.end();
+      } else {
+        return {
+          success: false,
+          message: 'Provider non supporté pour la vérification du contenu'
+        };
+      }
+      
+      return {
+        success: true,
+        data: {
+          tablesContent: tablesContent
+        }
+      };
+      
+    } catch (error) {
+      console.error('Erreur lors de la vérification du contenu des tables:', error);
+      return {
+        success: false,
+        message: `Erreur lors de la vérification du contenu: ${error.message}`
+      };
+    }
+  }
+
   // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase, finalizeMigration
   // (elles peuvent rester identiques, mais assure-toi de supprimer les doublons et de placer chaque fonction une seule fois).
 }
