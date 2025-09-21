@@ -160,6 +160,87 @@ class DatabaseConfigService {
     return isNaN(date.getTime()) ? null : date;
   }
 
+  async checkTablesExist(config) {
+    const { provider, host, port, database, username, password } = config;
+    
+    try {
+      const expectedTables = this.getExpectedTablesFromSchema();
+      const existingTables = [];
+      const missingTables = [];
+      
+      if (provider === 'mysql') {
+        const mysql = require('mysql2/promise');
+        const connection = await mysql.createConnection({
+          host: host,
+          port: parseInt(port) || 3306,
+          user: username,
+          password: password,
+          database: database,
+          timeout: 5000
+        });
+        
+        const [rows] = await connection.execute('SHOW TABLES');
+        const tableNames = rows.map(row => Object.values(row)[0]);
+        
+        expectedTables.forEach(table => {
+          if (tableNames.includes(table)) {
+            existingTables.push(table);
+          } else {
+            missingTables.push(table);
+          }
+        });
+        
+        await connection.end();
+        
+      } else if (provider === 'postgresql') {
+        const { Client } = require('pg');
+        const client = new Client({
+          host: host,
+          port: parseInt(port) || 5432,
+          user: username,
+          password: password,
+          database: database,
+          connectionTimeoutMillis: 5000
+        });
+        
+        await client.connect();
+        const result = await client.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+        const tableNames = result.rows.map(row => row.table_name);
+        
+        expectedTables.forEach(table => {
+          if (tableNames.includes(table)) {
+            existingTables.push(table);
+          } else {
+            missingTables.push(table);
+          }
+        });
+        
+        await client.end();
+      } else {
+        return {
+          success: false,
+          message: 'Provider non supporté pour la vérification des tables'
+        };
+      }
+      
+      return {
+        success: true,
+        data: {
+          existing: existingTables,
+          missing: missingTables,
+          allTablesExist: missingTables.length === 0
+        }
+      };
+      
+    } catch (error) {
+      console.error('Erreur lors de la vérification des tables:', error);
+      return {
+        success: false,
+        message: `Erreur lors de la vérification des tables: ${error.message}`
+      };
+    }
+  }
+
   // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase, finalizeMigration
   // (elles peuvent rester identiques, mais assure-toi de supprimer les doublons et de placer chaque fonction une seule fois).
 }
