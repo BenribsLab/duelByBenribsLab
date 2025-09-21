@@ -457,20 +457,17 @@ class DatabaseConfigService {
       process.env.DB_USER = newConfig.username;
       process.env.DB_PASS = newConfig.password;
       
-      // 4. Mettre à jour le fichier .env si on n'est pas dans Docker
-      const isDocker = fs.existsSync('/.dockerenv');
-      if (!isDocker) {
-        console.log('📝 Mise à jour du fichier .env...');
-        this.updateEnvFile({
-          DB_PROVIDER: newConfig.provider,
-          DATABASE_URL: databaseUrl,
-          DB_HOST: newConfig.host,
-          DB_PORT: newConfig.port,
-          DB_NAME: newConfig.database,
-          DB_USER: newConfig.username,
-          DB_PASS: newConfig.password
-        });
-      }
+      // 4. Mettre à jour le fichier .env (toujours, même dans Docker)
+      console.log('📝 Mise à jour du fichier .env...');
+      this.updateEnvFile({
+        DB_PROVIDER: newConfig.provider,
+        DATABASE_URL: databaseUrl,
+        DB_HOST: newConfig.host,
+        DB_PORT: newConfig.port,
+        DB_NAME: newConfig.database,
+        DB_USER: newConfig.username,
+        DB_PASS: newConfig.password
+      });
       
       // 5. Générer le client Prisma avec le nouveau schéma
       console.log('🔧 Génération du client Prisma...');
@@ -502,6 +499,7 @@ class DatabaseConfigService {
       }
       
       // 7. Indiquer si un redémarrage est nécessaire
+      const isDocker = fs.existsSync('/.dockerenv');
       const needsRestart = isDocker || true; // Toujours recommander un redémarrage pour être sûr
       
       console.log('✅ Finalisation terminée avec succès');
