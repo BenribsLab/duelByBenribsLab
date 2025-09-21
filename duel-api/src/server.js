@@ -5,6 +5,8 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 require('dotenv').config();
 
+// Importer database.js pour initialiser la configuration dynamique
+require('./database');
 const { testConnection } = require('./database');
 const pushNotificationService = require('./services/pushNotificationService');
 
