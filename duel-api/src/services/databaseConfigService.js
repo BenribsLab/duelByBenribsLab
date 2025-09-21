@@ -369,7 +369,8 @@ class DatabaseConfigService {
       
       // 4. Migrer les données depuis SQLite vers la nouvelle base
       console.log('📦 Migration des données...');
-      const dataMigrationResult = await this.copyDataFromSQLite(config);
+      const mode = config.migrationMode || 'merge'; // Par défaut: merge
+      const dataMigrationResult = await this.copyDataFromSQLite(config, mode);
       
       if (!dataMigrationResult.success) {
         // Supprimer le verrou en cas d'échec
@@ -575,9 +576,11 @@ class DatabaseConfigService {
 
   /**
    * Copier les données depuis SQLite vers une nouvelle base de données
+   * @param {Object} targetConfig - Configuration de la base cible
+   * @param {string} mode - Mode de migration: 'merge', 'replace', 'skip'
    */
-  async copyDataFromSQLite(targetConfig) {
-    console.log('📦 Début de la copie des données depuis SQLite...');
+  async copyDataFromSQLite(targetConfig, mode = 'merge') {
+    console.log(`📦 Début de la copie des données depuis SQLite (mode: ${mode})...`);
     
     try {
       // 1. Utiliser Prisma pour lire depuis SQLite (comme l'admin le fait)
@@ -608,6 +611,39 @@ class DatabaseConfigService {
       
       console.log('✅ Connexion MySQL établie pour l\'insertion');
       
+      // Gestion des modes de migration
+      if (mode === 'skip') {
+        console.log('⏭️ Mode "Ne rien ajouter" - aucune migration effectuée');
+        await connection.end();
+        return {
+          success: true,
+          message: 'Migration ignorée - contenu distant conservé',
+          data: {
+            recordsMigrated: 0,
+            modelsProcessed: 0,
+            migrationDetails: {
+              duellistes: 0,
+              duels: 0,
+              validations_scores: 0,
+              email_invitations: 0
+            }
+          }
+        };
+      }
+      
+      if (mode === 'replace') {
+        console.log('🗑️ Mode "Ecraser" - vidage des tables...');
+        try {
+          await connection.execute('DELETE FROM validations_scores');
+          await connection.execute('DELETE FROM duels');
+          await connection.execute('DELETE FROM duellistes');
+          await connection.execute('DELETE FROM email_invitations');
+          console.log('✅ Tables vidées');
+        } catch (error) {
+          console.log('⚠️ Erreur lors du vidage des tables:', error.message);
+        }
+      }
+      
       let totalRecords = 0;
       let migrationDetails = {
         duellistes: 0,
@@ -626,7 +662,7 @@ class DatabaseConfigService {
         console.log(`📊 ${duellistes.length} duellistes trouvés`);
         
         if (duellistes.length > 0) {
-          await this.insertDataToMySQL(connection, 'duellistes', duellistes);
+          await this.insertDataToMySQL(connection, 'duellistes', duellistes, mode);
           totalRecords += duellistes.length;
           migrationDetails.duellistes = duellistes.length;
           console.log(`✅ ${duellistes.length} duellistes migrés`);
@@ -638,7 +674,7 @@ class DatabaseConfigService {
         console.log(`📊 ${duels.length} duels trouvés`);
         
         if (duels.length > 0) {
-          await this.insertDataToMySQL(connection, 'duels', duels);
+          await this.insertDataToMySQL(connection, 'duels', duels, mode);
           totalRecords += duels.length;
           migrationDetails.duels = duels.length;
           console.log(`✅ ${duels.length} duels migrés`);
@@ -650,7 +686,7 @@ class DatabaseConfigService {
         console.log(`📊 ${validations.length} validations trouvées`);
         
         if (validations.length > 0) {
-          await this.insertDataToMySQL(connection, 'validations_scores', validations);
+          await this.insertDataToMySQL(connection, 'validations_scores', validations, mode);
           totalRecords += validations.length;
           migrationDetails.validations_scores = validations.length;
           console.log(`✅ ${validations.length} validations migrées`);
@@ -663,7 +699,7 @@ class DatabaseConfigService {
           console.log(`📊 ${invitations.length} invitations trouvées`);
           
           if (invitations.length > 0) {
-            await this.insertDataToMySQL(connection, 'email_invitations', invitations);
+            await this.insertDataToMySQL(connection, 'email_invitations', invitations, mode);
             totalRecords += invitations.length;
             migrationDetails.email_invitations = invitations.length;
             console.log(`✅ ${invitations.length} invitations migrées`);
@@ -703,8 +739,12 @@ class DatabaseConfigService {
 
   /**
    * Insérer des données dans MySQL de façon dynamique
+   * @param {Object} connection - Connexion MySQL
+   * @param {string} tableName - Nom de la table
+   * @param {Array} data - Données à insérer
+   * @param {string} mode - Mode d'insertion: 'merge' ou 'replace'
    */
-  async insertDataToMySQL(connection, tableName, data) {
+  async insertDataToMySQL(connection, tableName, data, mode = 'merge') {
     if (!data || data.length === 0) return;
     
     // Obtenir les colonnes du premier objet
@@ -723,8 +763,11 @@ class DatabaseConfigService {
       });
     });
     
+    // Choisir le type d'insertion selon le mode
+    const insertType = mode === 'merge' ? 'INSERT IGNORE' : 'INSERT';
+    
     // Exécuter l'insertion
-    const query = `INSERT IGNORE INTO ${tableName} (${columnsList}) VALUES ${placeholders}`;
+    const query = `${insertType} INTO ${tableName} (${columnsList}) VALUES ${placeholders}`;
     await connection.execute(query, values);
   }
 

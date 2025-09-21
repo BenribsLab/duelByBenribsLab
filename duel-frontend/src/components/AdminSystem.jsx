@@ -382,14 +382,14 @@ const AdminSystem = () => {
   };
 
   // Étape 4: Migrer les données
-  const migrateData = async () => {
+  const migrateData = async (mode = 'merge') => {
     setMigrationSteps(prev => ({
       ...prev,
-      dataMigration: { status: 'loading', data: null, message: 'Migration des données en cours...' }
+      dataMigration: { status: 'loading', data: null, message: `Migration des données en cours (${mode})...` }
     }));
     
     try {
-      const response = await databaseService.migrateData(migrationForm);
+      const response = await databaseService.migrateData({...migrationForm, migrationMode: mode});
       if (response.success) {
         setMigrationSteps(prev => ({
           ...prev,
@@ -847,25 +847,57 @@ const AdminSystem = () => {
                       </div>
                     )}
                     
-                    <button
-                      onClick={migrateData}
-                      disabled={
-                        migrationSteps.contentCheck.status !== 'success' ||
-                        migrationSteps.dataMigration.status === 'loading' ||
-                        migrationSteps.dataMigration.status === 'success'
-                      }
-                      className={`px-3 py-1.5 rounded text-xs font-medium ${
-                        migrationSteps.contentCheck.status !== 'success' ||
-                        migrationSteps.dataMigration.status === 'loading' ||
-                        migrationSteps.dataMigration.status === 'success'
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                    >
-                      {migrationSteps.dataMigration.status === 'loading' ? 'Migration...' : 
-                       migrationSteps.dataMigration.status === 'success' ? 'Terminé' : 
-                       'Migrer les données'}
-                    </button>
+                    {migrationSteps.dataMigration.status === 'idle' && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-600 mb-2">Choisissez le mode de migration :</div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <button
+                            onClick={() => migrateData('merge')}
+                            disabled={migrationSteps.contentCheck.status !== 'success'}
+                            className={`px-3 py-2 rounded text-xs font-medium text-left ${
+                              migrationSteps.contentCheck.status !== 'success'
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
+                          >
+                            <div className="font-medium">📥 Fusionner le contenu</div>
+                            <div className="text-xs opacity-80">Ajouter les données SQLite au contenu MySQL existant</div>
+                          </button>
+                          
+                          <button
+                            onClick={() => migrateData('replace')}
+                            disabled={migrationSteps.contentCheck.status !== 'success'}
+                            className={`px-3 py-2 rounded text-xs font-medium text-left ${
+                              migrationSteps.contentCheck.status !== 'success'
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                            }`}
+                          >
+                            <div className="font-medium">🗑️ Écraser le contenu</div>
+                            <div className="text-xs opacity-80">Vider MySQL et y copier les données SQLite</div>
+                          </button>
+                          
+                          <button
+                            onClick={() => migrateData('skip')}
+                            disabled={migrationSteps.contentCheck.status !== 'success'}
+                            className={`px-3 py-2 rounded text-xs font-medium text-left ${
+                              migrationSteps.contentCheck.status !== 'success'
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-gray-600 text-white hover:bg-gray-700'
+                            }`}
+                          >
+                            <div className="font-medium">⏭️ Ne rien ajouter</div>
+                            <div className="text-xs opacity-80">Garder le contenu MySQL sans modification</div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {migrationSteps.dataMigration.status === 'success' && (
+                      <div className="text-xs text-gray-600">
+                        Migration terminée - vous pouvez maintenant finaliser la migration
+                      </div>
+                    )}
                   </div>
                 )}
 
