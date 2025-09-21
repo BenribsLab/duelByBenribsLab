@@ -583,8 +583,8 @@ class DatabaseConfigService {
       // 1. Utiliser Prisma pour lire depuis SQLite (comme l'admin le fait)
       const { PrismaClient } = require('@prisma/client');
       
-      // Le client Prisma actuel (SQLite)
-      const currentPrisma = require('../database');
+      // Le client Prisma actuel (SQLite) - utiliser directement prisma depuis database.js
+      const prisma = require('../database');
       
       // 2. Créer une connexion vers la base cible
       const targetUrl = this.buildDatabaseUrl(targetConfig);
@@ -606,7 +606,7 @@ class DatabaseConfigService {
       try {
         // Duellistes
         console.log('📦 Migration des duellistes...');
-        const duellistes = await currentPrisma.dueliste.findMany();
+        const duellistes = await prisma.dueliste.findMany();
         console.log(`📊 ${duellistes.length} duellistes trouvés`);
         
         if (duellistes.length > 0) {
@@ -620,7 +620,7 @@ class DatabaseConfigService {
         
         // Duels
         console.log('📦 Migration des duels...');
-        const duels = await currentPrisma.duel.findMany();
+        const duels = await prisma.duel.findMany();
         console.log(`📊 ${duels.length} duels trouvés`);
         
         if (duels.length > 0) {
@@ -634,7 +634,7 @@ class DatabaseConfigService {
         
         // Validations scores
         console.log('📦 Migration des validations scores...');
-        const validations = await currentPrisma.validationScore.findMany();
+        const validations = await prisma.validationScore.findMany();
         console.log(`📊 ${validations.length} validations trouvées`);
         
         if (validations.length > 0) {
@@ -649,7 +649,7 @@ class DatabaseConfigService {
         // Email invitations (si la table existe)
         try {
           console.log('📦 Migration des email invitations...');
-          const invitations = await currentPrisma.emailInvitation.findMany();
+          const invitations = await prisma.emailInvitation.findMany();
           console.log(`📊 ${invitations.length} invitations trouvées`);
           
           if (invitations.length > 0) {
