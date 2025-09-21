@@ -816,9 +816,15 @@ const AdminSystem = () => {
                       )}
                     </div>
                     
-                    {migrationSteps.dataMigration.status === 'idle' && (
-                      <div className="text-gray-600 text-xs mb-3">
-                        Prêt pour la migration des données depuis SQLite
+                    {migrationSteps.dataMigration.status === 'loading' && (
+                      <div className="text-blue-600 text-xs mb-3">
+                        {migrationSteps.dataMigration.message}
+                      </div>
+                    )}
+                    
+                    {migrationSteps.dataMigration.status === 'error' && (
+                      <div className="text-red-600 text-xs mb-3">
+                        ✗ {migrationSteps.dataMigration.message}
                       </div>
                     )}
                     
@@ -835,20 +841,11 @@ const AdminSystem = () => {
                       </div>
                     )}
                     
-                    {migrationSteps.dataMigration.status === 'error' && (
-                      <div className="text-red-600 text-xs mb-3">
-                        ✗ {migrationSteps.dataMigration.message}
-                      </div>
-                    )}
-                    
-                    {migrationSteps.dataMigration.status === 'loading' && (
-                      <div className="text-blue-600 text-xs mb-3">
-                        {migrationSteps.dataMigration.message}
-                      </div>
-                    )}
-                    
                     {migrationSteps.dataMigration.status === 'idle' && (
                       <div className="space-y-2">
+                        <div className="text-gray-600 text-xs mb-2">
+                          Prêt pour la migration des données depuis SQLite
+                        </div>
                         <div className="text-xs text-gray-600 mb-2">Choisissez le mode de migration :</div>
                         <div className="grid grid-cols-1 gap-2">
                           <button
@@ -890,12 +887,6 @@ const AdminSystem = () => {
                             <div className="text-xs opacity-80">Garder le contenu MySQL sans modification</div>
                           </button>
                         </div>
-                      </div>
-                    )}
-                    
-                    {migrationSteps.dataMigration.status === 'success' && (
-                      <div className="text-xs text-gray-600">
-                        Migration terminée - vous pouvez maintenant finaliser la migration
                       </div>
                     )}
                   </div>
