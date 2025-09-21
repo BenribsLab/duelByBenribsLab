@@ -573,6 +573,122 @@ class DatabaseConfigService {
     console.log('✅ Fichier .env mis à jour');
   }
 
+  /**
+   * Copier les données depuis SQLite vers une nouvelle base de données
+   */
+  async copyDataFromSQLite(targetConfig) {
+    console.log('📦 Début de la copie des données depuis SQLite...');
+    
+    try {
+      // 1. Se connecter à SQLite (source)
+      const sqliteDb = new sqlite3.Database('./prisma/dev.db');
+      
+      // 2. Créer une connexion vers la base cible
+      const targetUrl = this.buildDatabaseUrl(targetConfig);
+      const { PrismaClient } = require('@prisma/client');
+      
+      // Créer un client Prisma temporaire pour la base cible
+      const targetPrisma = new PrismaClient({
+        datasources: {
+          db: {
+            url: targetUrl
+          }
+        }
+      });
+      
+      let totalRecords = 0;
+      
+      // 3. Lister les tables à migrer depuis le schéma MySQL
+      const mysqlSchemaPath = path.join(process.cwd(), 'prisma', 'schema.mysql.prisma');
+      const schemaContent = fs.readFileSync(mysqlSchemaPath, 'utf8');
+      
+      // Extraire les noms des modèles/tables du schéma
+      const modelMatches = schemaContent.match(/model\s+(\w+)\s*{/g);
+      const tables = modelMatches ? modelMatches.map(match => {
+        const modelName = match.match(/model\s+(\w+)/)[1];
+        // Convertir PascalCase en snake_case pour le nom de table
+        return modelName.replace(/([A-Z])/g, (match, p1, offset) => 
+          offset > 0 ? '_' + p1.toLowerCase() : p1.toLowerCase()
+        );
+      }) : [];
+      
+      console.log('📋 Tables à migrer:', tables);
+      
+      // 4. Pour chaque table, copier les données
+      for (const tableName of tables) {
+        try {
+          console.log(`📦 Migration de la table: ${tableName}`);
+          
+          // Lire les données depuis SQLite
+          const rows = await new Promise((resolve, reject) => {
+            sqliteDb.all(`SELECT * FROM ${tableName}`, (err, rows) => {
+              if (err) {
+                if (err.message.includes('no such table')) {
+                  console.log(`⚠️ Table ${tableName} n'existe pas dans SQLite - ignorée`);
+                  resolve([]);
+                } else {
+                  reject(err);
+                }
+              } else {
+                resolve(rows);
+              }
+            });
+          });
+          
+          if (rows.length === 0) {
+            console.log(`📋 Table ${tableName} vide - ignorée`);
+            continue;
+          }
+          
+          console.log(`📦 ${rows.length} enregistrements trouvés dans ${tableName}`);
+          
+          // Convertir le nom de table en nom de modèle Prisma
+          const modelName = tableName.replace(/_(\w)/g, (match, p1) => p1.toUpperCase())
+                                     .replace(/^(\w)/, (match, p1) => p1.toUpperCase());
+          
+          // Insérer les données dans la base cible via Prisma
+          if (targetPrisma[modelName.toLowerCase()]) {
+            // Utiliser createMany si le modèle existe
+            await targetPrisma[modelName.toLowerCase()].createMany({
+              data: rows,
+              skipDuplicates: true
+            });
+            totalRecords += rows.length;
+            console.log(`✅ ${rows.length} enregistrements migrés pour ${tableName}`);
+          } else {
+            console.warn(`⚠️ Modèle ${modelName} non trouvé dans Prisma - table ${tableName} ignorée`);
+          }
+          
+        } catch (tableError) {
+          console.warn(`⚠️ Erreur lors de la migration de ${tableName}:`, tableError.message);
+          // Continuer avec les autres tables
+        }
+      }
+      
+      // 5. Fermer les connexions
+      sqliteDb.close();
+      await targetPrisma.$disconnect();
+      
+      console.log(`✅ Migration terminée - ${totalRecords} enregistrements copiés au total`);
+      
+      return {
+        success: true,
+        message: `Migration réussie - ${totalRecords} enregistrements copiés`,
+        data: {
+          recordsMigrated: totalRecords,
+          tablesProcessed: tables.length
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la copie des données:', error);
+      return {
+        success: false,
+        message: `Erreur lors de la copie des données: ${error.message}`
+      };
+    }
+  }
+
   // Autres méthodes : migrateToNewDatabase, copyDataFromSQLite, checkTablesExist, createMissingTables, checkTablesContent, migrateDatabase
   // (elles peuvent rester identiques, mais assure-toi de supprimer les doublons et de placer chaque fonction une seule fois).
 }
