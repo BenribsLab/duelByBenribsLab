@@ -121,7 +121,15 @@ class DatabaseConfigService {
     try {
       if (provider === 'mysql') {
         const mysql = require('mysql2/promise');
-        const conn = await mysql.createConnection({ host, port: parseInt(port) || 3306, user: username, password, database, timeout: 5000 });
+        const conn = await mysql.createConnection({ 
+          host, 
+          port: parseInt(port) || 3306, 
+          user: username, 
+          password, 
+          database,
+          connectTimeout: 5000,
+          acquireTimeout: 5000
+        });
         await conn.execute('SELECT 1');
         await conn.end();
         return { success: true, message: 'Connexion MySQL reussie' };
@@ -185,7 +193,8 @@ class DatabaseConfigService {
           user: username,
           password: password,
           database: database,
-          timeout: 5000
+          connectTimeout: 5000,
+          acquireTimeout: 5000
         });
         
         const [rows] = await connection.execute('SHOW TABLES');
@@ -265,7 +274,8 @@ class DatabaseConfigService {
           user: username,
           password: password,
           database: database,
-          timeout: 5000
+          connectTimeout: 5000,
+          acquireTimeout: 5000
         });
         
         // Compter les enregistrements dans chaque table
@@ -606,7 +616,9 @@ class DatabaseConfigService {
         port: parseInt(port),
         user: username,
         password,
-        database
+        database,
+        connectTimeout: 5000,
+        acquireTimeout: 5000
       });
       
       console.log('✅ Connexion MySQL établie pour l\'insertion');

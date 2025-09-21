@@ -35,7 +35,7 @@ const AdminSystem = () => {
     tablesCheck: { status: 'pending', data: null, message: '' },
     tablesCreation: { status: 'pending', data: null, message: '' },
     contentCheck: { status: 'pending', data: null, message: '' },
-    dataMigration: { status: 'pending', data: null, message: '' },
+    dataMigration: { status: 'idle', data: null, message: '' },
     finalization: { status: 'pending', message: '', needsRestart: false }
   });
 
