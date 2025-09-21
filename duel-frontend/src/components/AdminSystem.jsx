@@ -827,9 +827,9 @@ const AdminSystem = () => {
                         ✓ Migration terminée avec succès !
                         {migrationSteps.dataMigration.data && (
                           <div className="mt-1 text-xs">
-                            <div>Duellistes: {migrationSteps.dataMigration.data.duellistes || 0}</div>
-                            <div>Duels: {migrationSteps.dataMigration.data.duels || 0}</div>
-                            <div>Scores: {migrationSteps.dataMigration.data.validations_scores || 0}</div>
+                            <div>Duellistes: {migrationSteps.dataMigration.data.migrationDetails?.duellistes || 0}</div>
+                            <div>Duels: {migrationSteps.dataMigration.data.migrationDetails?.duels || 0}</div>
+                            <div>Scores: {migrationSteps.dataMigration.data.migrationDetails?.validations_scores || 0}</div>
                           </div>
                         )}
                       </div>

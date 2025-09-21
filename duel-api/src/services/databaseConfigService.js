@@ -609,6 +609,12 @@ class DatabaseConfigService {
       console.log('✅ Connexion MySQL établie pour l\'insertion');
       
       let totalRecords = 0;
+      let migrationDetails = {
+        duellistes: 0,
+        duels: 0,
+        validations_scores: 0,
+        email_invitations: 0
+      };
       
       console.log('📋 Migration des modèles Prisma...');
       
@@ -622,6 +628,7 @@ class DatabaseConfigService {
         if (duellistes.length > 0) {
           await this.insertDataToMySQL(connection, 'duellistes', duellistes);
           totalRecords += duellistes.length;
+          migrationDetails.duellistes = duellistes.length;
           console.log(`✅ ${duellistes.length} duellistes migrés`);
         }
         
@@ -633,6 +640,7 @@ class DatabaseConfigService {
         if (duels.length > 0) {
           await this.insertDataToMySQL(connection, 'duels', duels);
           totalRecords += duels.length;
+          migrationDetails.duels = duels.length;
           console.log(`✅ ${duels.length} duels migrés`);
         }
         
@@ -644,6 +652,7 @@ class DatabaseConfigService {
         if (validations.length > 0) {
           await this.insertDataToMySQL(connection, 'validations_scores', validations);
           totalRecords += validations.length;
+          migrationDetails.validations_scores = validations.length;
           console.log(`✅ ${validations.length} validations migrées`);
         }
         
@@ -656,6 +665,7 @@ class DatabaseConfigService {
           if (invitations.length > 0) {
             await this.insertDataToMySQL(connection, 'email_invitations', invitations);
             totalRecords += invitations.length;
+            migrationDetails.email_invitations = invitations.length;
             console.log(`✅ ${invitations.length} invitations migrées`);
           }
         } catch (invitationError) {
@@ -677,7 +687,8 @@ class DatabaseConfigService {
         message: `Migration réussie - ${totalRecords} enregistrements copiés`,
         data: {
           recordsMigrated: totalRecords,
-          modelsProcessed: 4
+          modelsProcessed: 4,
+          migrationDetails: migrationDetails
         }
       };
       
