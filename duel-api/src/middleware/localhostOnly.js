@@ -15,12 +15,20 @@ const localhostOnly = (req, res, next) => {
     'localhost'
   ];
   
-  // Vérifier si l'IP est localhost
+  // Vérifier si l'IP est localhost OU si c'est une requête interne du serveur
   const isLocalhost = allowedIPs.includes(normalizedIP) || 
                      normalizedIP === '127.0.0.1' ||
                      normalizedIP === '::1' ||
                      normalizedIP.startsWith('127.') ||
-                     req.hostname === 'localhost';
+                     req.hostname === 'localhost' ||
+                     // Accepter les requêtes depuis le même serveur (Docker interne)
+                     normalizedIP.startsWith('172.') || // Docker bridge network
+                     normalizedIP.startsWith('10.') ||  // Docker internal networks
+                     // Si la requête vient avec les bons headers (reverse proxy)
+                     req.headers['x-forwarded-for'] === '127.0.0.1' ||
+                     // Ou si c'est le serveur qui se contacte lui-même
+                     req.headers.host?.includes('localhost') ||
+                     req.headers.host?.includes('127.0.0.1');
   
   if (!isLocalhost) {
     console.warn(`🚫 Tentative d'accès non autorisée à une route localhost depuis ${normalizedIP}`);
