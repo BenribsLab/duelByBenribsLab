@@ -23,7 +23,7 @@ async function runPrismaCommands() {
       console.log('✅ Migrations appliquées avec succès');
     } catch (migrateError) {
       console.log('⚠️ Migrate deploy échoué, utilisation de db push...');
-      await execAsync('npx prisma db push --accept-data-loss --skip-seed');
+      await execAsync('npx prisma db push --accept-data-loss');
       console.log('✅ Base de données synchronisée avec db push');
     }
     
