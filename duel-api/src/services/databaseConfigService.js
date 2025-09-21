@@ -582,6 +582,8 @@ class DatabaseConfigService {
     try {
       // 1. Se connecter à SQLite (source) - utiliser la vraie URL SQLite actuelle
       const currentConfig = this.getCurrentConfig();
+      console.log('🔍 Configuration actuelle:', JSON.stringify(currentConfig, null, 2));
+      
       let sqliteDbPath;
       
       if (currentConfig.provider === 'sqlite') {
@@ -595,7 +597,24 @@ class DatabaseConfigService {
         console.log('🔍 Utilisation du chemin SQLite par défaut:', sqliteDbPath);
       }
       
+      // Vérifier si le fichier existe
+      if (!fs.existsSync(sqliteDbPath)) {
+        console.error('❌ Fichier SQLite introuvable:', sqliteDbPath);
+        throw new Error(`Fichier SQLite introuvable: ${sqliteDbPath}`);
+      }
+      
+      console.log('✅ Fichier SQLite trouvé, taille:', fs.statSync(sqliteDbPath).size, 'bytes');
+      
       const sqliteDb = new sqlite3.Database(sqliteDbPath);
+      
+      // Test rapide pour lister les tables existantes
+      const existingTables = await new Promise((resolve, reject) => {
+        sqliteDb.all("SELECT name FROM sqlite_master WHERE type='table'", (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows.map(row => row.name));
+        });
+      });
+      console.log('📋 Tables existantes dans SQLite:', existingTables);
       
       // 2. Créer une connexion vers la base cible
       const targetUrl = this.buildDatabaseUrl(targetConfig);
