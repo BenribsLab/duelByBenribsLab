@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../database');
 const emailService = require('../services/emailService');
 const { authenticateToken } = require('../middleware/auth');
-
-const prisma = new PrismaClient();
 
 /**
  * POST /api/invitations/email

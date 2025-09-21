@@ -1,10 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../database');
 const emailService = require('./emailService');
-
-const prisma = new PrismaClient();
 
 class AuthService {
   // Normaliser un email (trim + lowercase)
