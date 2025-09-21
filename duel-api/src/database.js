@@ -1,4 +1,37 @@
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
+const path = require('path');
+
+// Fonction pour copier le bon schéma selon le provider
+function copySchemaFile() {
+  const provider = process.env.DB_PROVIDER || 'sqlite';
+  const prismaDir = path.join(__dirname, '../prisma');
+  const targetSchema = path.join(prismaDir, 'schema.prisma');
+  
+  let sourceSchema;
+  if (provider === 'mysql') {
+    sourceSchema = path.join(prismaDir, 'schema.mysql.prisma');
+  } else {
+    sourceSchema = path.join(prismaDir, 'schema.sqlite.prisma');
+  }
+  
+  try {
+    // Vérifier que le fichier source existe
+    if (!fs.existsSync(sourceSchema)) {
+      console.warn(`⚠️ Fichier schéma source introuvable: ${sourceSchema}`);
+      return;
+    }
+    
+    // Copier le schéma approprié
+    fs.copyFileSync(sourceSchema, targetSchema);
+    console.log(`📋 Schéma ${provider} copié: ${path.basename(sourceSchema)} → schema.prisma`);
+  } catch (error) {
+    console.error('❌ Erreur lors de la copie du schéma:', error);
+  }
+}
+
+// Copier le schéma approprié au démarrage
+copySchemaFile();
 
 // Fonction pour construire l'URL de base de données dynamiquement
 function buildDatabaseUrl() {
@@ -50,9 +83,10 @@ const prisma = new PrismaClient({
 
 // Fonction de test de connexion
 async function testConnection() {
+  const provider = process.env.DB_PROVIDER || 'sqlite';
   try {
     await prisma.$connect();
-    console.log('✅ Connexion à la base de données SQLite établie');
+    console.log(`✅ Connexion à la base de données ${provider.toUpperCase()} établie`);
     return true;
   } catch (error) {
     console.error('❌ Erreur de connexion à la base de données:', error);
