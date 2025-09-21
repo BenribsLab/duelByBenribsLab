@@ -1,9 +1,32 @@
 const { PrismaClient } = require('@prisma/client');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+
+const execAsync = promisify(exec);
+
+// Fonction pour exécuter les commandes Prisma
+async function runPrismaCommands() {
+  const provider = process.env.DB_PROVIDER || 'sqlite';
+  
+  try {
+    console.log('🔧 Génération du client Prisma...');
+    const { stdout: generateOutput } = await execAsync('npx prisma generate');
+    console.log('✅ Client Prisma généré');
+    
+    console.log(`🗄️ Synchronisation de la base de données ${provider.toUpperCase()}...`);
+    const { stdout: pushOutput } = await execAsync('npx prisma db push --force-reset');
+    console.log('✅ Base de données synchronisée');
+    
+  } catch (error) {
+    console.error('❌ Erreur lors des commandes Prisma:', error.message);
+    // Ne pas arrêter le processus, continuer avec Prisma existant
+  }
+}
 
 // Fonction pour copier le bon schéma selon le provider
-function copySchemaFile() {
+async function copySchemaFile() {
   const provider = process.env.DB_PROVIDER || 'sqlite';
   const prismaDir = path.join(__dirname, '../prisma');
   const targetSchema = path.join(prismaDir, 'schema.prisma');
@@ -19,19 +42,46 @@ function copySchemaFile() {
     // Vérifier que le fichier source existe
     if (!fs.existsSync(sourceSchema)) {
       console.warn(`⚠️ Fichier schéma source introuvable: ${sourceSchema}`);
-      return;
+      return false;
+    }
+    
+    // Vérifier si une copie est nécessaire
+    if (fs.existsSync(targetSchema)) {
+      const sourceContent = fs.readFileSync(sourceSchema, 'utf8');
+      const targetContent = fs.readFileSync(targetSchema, 'utf8');
+      if (sourceContent === targetContent) {
+        console.log(`📋 Schéma ${provider} déjà à jour`);
+        return false; // Pas de changement
+      }
     }
     
     // Copier le schéma approprié
     fs.copyFileSync(sourceSchema, targetSchema);
     console.log(`📋 Schéma ${provider} copié: ${path.basename(sourceSchema)} → schema.prisma`);
+    return true; // Changement effectué
   } catch (error) {
     console.error('❌ Erreur lors de la copie du schéma:', error);
+    return false;
   }
 }
 
-// Copier le schéma approprié au démarrage
-copySchemaFile();
+// Initialisation automatique
+async function initializeDatabase() {
+  console.log('🚀 Initialisation de la base de données...');
+  
+  // Copier le schéma approprié
+  const schemaChanged = await copySchemaFile();
+  
+  // Exécuter les commandes Prisma si nécessaire
+  if (schemaChanged || process.env.FORCE_PRISMA_INIT === 'true') {
+    await runPrismaCommands();
+  }
+  
+  console.log('✅ Base de données initialisée');
+}
+
+// Lancer l'initialisation au démarrage
+initializeDatabase().catch(console.error);
 
 // Fonction pour construire l'URL de base de données dynamiquement
 function buildDatabaseUrl() {
