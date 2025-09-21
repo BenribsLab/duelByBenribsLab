@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../database');
 
 /**
  * POST /api/users/:id/push-token - Enregistrer ou mettre à jour le token FCM d'un utilisateur

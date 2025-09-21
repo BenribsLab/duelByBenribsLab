@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../database');
 const { deleteAvatarFile, getAvatarUrl, getFilenameFromUrl } = require('../middleware/upload');
-
-const prisma = new PrismaClient();
 
 /**
  * Upload d'un avatar
