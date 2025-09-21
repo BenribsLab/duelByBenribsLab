@@ -598,33 +598,35 @@ class DatabaseConfigService {
       
       let totalRecords = 0;
       
-      // 3. Lister les tables à migrer depuis le schéma MySQL
+      // 3. Lister les modèles et leurs tables mappées depuis le schéma
       const mysqlSchemaPath = path.join(process.cwd(), 'prisma', 'schema.mysql.prisma');
       const schemaContent = fs.readFileSync(mysqlSchemaPath, 'utf8');
       
-      // Extraire les noms des modèles/tables du schéma
-      const modelMatches = schemaContent.match(/model\s+(\w+)\s*{/g);
-      const tables = modelMatches ? modelMatches.map(match => {
-        const modelName = match.match(/model\s+(\w+)/)[1];
-        // Convertir PascalCase en snake_case pour le nom de table
-        return modelName.replace(/([A-Z])/g, (match, p1, offset) => 
-          offset > 0 ? '_' + p1.toLowerCase() : p1.toLowerCase()
-        );
-      }) : [];
+      // Extraire les modèles et leurs tables mappées
+      const models = [];
+      const modelRegex = /model\s+(\w+)\s*{[^}]*@@map\("([^"]+)"\)/g;
+      let match;
       
-      console.log('📋 Tables à migrer:', tables);
+      while ((match = modelRegex.exec(schemaContent)) !== null) {
+        models.push({
+          modelName: match[1],
+          tableName: match[2]
+        });
+      }
       
-      // 4. Pour chaque table, copier les données
-      for (const tableName of tables) {
+      console.log('📋 Modèles à migrer:', models);
+      
+      // 4. Pour chaque modèle, copier les données
+      for (const model of models) {
         try {
-          console.log(`📦 Migration de la table: ${tableName}`);
+          console.log(`📦 Migration du modèle ${model.modelName} (table: ${model.tableName})`);
           
-          // Lire les données depuis SQLite
+          // Lire les données depuis SQLite en utilisant le nom de table mappé
           const rows = await new Promise((resolve, reject) => {
-            sqliteDb.all(`SELECT * FROM ${tableName}`, (err, rows) => {
+            sqliteDb.all(`SELECT * FROM "${model.tableName}"`, (err, rows) => {
               if (err) {
                 if (err.message.includes('no such table')) {
-                  console.log(`⚠️ Table ${tableName} n'existe pas dans SQLite - ignorée`);
+                  console.log(`⚠️ Table ${model.tableName} n'existe pas dans SQLite - ignorée`);
                   resolve([]);
                 } else {
                   reject(err);
@@ -636,31 +638,30 @@ class DatabaseConfigService {
           });
           
           if (rows.length === 0) {
-            console.log(`📋 Table ${tableName} vide - ignorée`);
+            console.log(`📋 Table ${model.tableName} vide - ignorée`);
             continue;
           }
           
-          console.log(`📦 ${rows.length} enregistrements trouvés dans ${tableName}`);
+          console.log(`📦 ${rows.length} enregistrements trouvés dans ${model.tableName}`);
           
-          // Convertir le nom de table en nom de modèle Prisma
-          const modelName = tableName.replace(/_(\w)/g, (match, p1) => p1.toUpperCase())
-                                     .replace(/^(\w)/, (match, p1) => p1.toUpperCase());
+          // Utiliser le nom du modèle en minuscule pour Prisma
+          const prismaModelName = model.modelName.toLowerCase();
           
           // Insérer les données dans la base cible via Prisma
-          if (targetPrisma[modelName.toLowerCase()]) {
+          if (targetPrisma[prismaModelName]) {
             // Utiliser createMany si le modèle existe
-            await targetPrisma[modelName.toLowerCase()].createMany({
+            await targetPrisma[prismaModelName].createMany({
               data: rows,
               skipDuplicates: true
             });
             totalRecords += rows.length;
-            console.log(`✅ ${rows.length} enregistrements migrés pour ${tableName}`);
+            console.log(`✅ ${rows.length} enregistrements migrés pour ${model.tableName}`);
           } else {
-            console.warn(`⚠️ Modèle ${modelName} non trouvé dans Prisma - table ${tableName} ignorée`);
+            console.warn(`⚠️ Modèle ${prismaModelName} non trouvé dans Prisma - table ${model.tableName} ignorée`);
           }
           
         } catch (tableError) {
-          console.warn(`⚠️ Erreur lors de la migration de ${tableName}:`, tableError.message);
+          console.warn(`⚠️ Erreur lors de la migration de ${model.modelName}:`, tableError.message);
           // Continuer avec les autres tables
         }
       }
