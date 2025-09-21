@@ -677,7 +677,7 @@ class DatabaseConfigService {
         message: `Migration réussie - ${totalRecords} enregistrements copiés`,
         data: {
           recordsMigrated: totalRecords,
-          tablesProcessed: tables.length
+          tablesProcessed: models.length
         }
       };
       
