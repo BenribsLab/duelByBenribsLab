@@ -133,85 +133,210 @@ npm start
 - `GET /` - Page d'accueil de l'API
 - `GET /api/health` - Status de santé (health check)
 
-### 👥 Duellistes (`/api/duellistes`) ⚠️ **ROUTES PUBLIQUES**
-> **🚨 ATTENTION CRITIQUE :** Ces routes sont actuellement **PUBLIQUES** (aucune authentification). N'importe qui peut créer, modifier ou supprimer des duellistes !
+### 👥 Duellistes (`/api/duellistes`) 🔒 **ROUTES SÉCURISÉES**
+> **✅ SÉCURISÉ :** Ces routes nécessitent une authentification JWT. Accès autorisé uniquement aux utilisateurs connectés.
 
-- `GET /` - Liste tous les duellistes **[PUBLIC]**
+- `GET /` - Liste tous les duellistes **[AUTHENTIFICATION REQUISE]**
   - **Query params** : `page`, `limit`, `search`, `categorie`
-- `GET /:id` - Détails d'un dueliste **[PUBLIC]**
-- `POST /` - Créer un nouveau dueliste **[PUBLIC - DANGEREUX ⚠️]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `GET /:id` - Détails d'un dueliste **[AUTHENTIFICATION REQUISE]**
+- `POST /` - Créer un nouveau dueliste **[AUTHENTIFICATION REQUISE]**
   - **Body** : `pseudo`, `avatarUrl?`, `categorie?`
-- `PUT /:id` - Modifier un dueliste **[PUBLIC - DANGEREUX ⚠️]**
-- `DELETE /:id` - Supprimer un dueliste **[PUBLIC - DANGEREUX ⚠️]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `PUT /:id` - Modifier un dueliste **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `DELETE /:id` - Supprimer un dueliste **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
 
-### ⚔️ Duels (`/api/duels`) ⚠️ **ROUTES PUBLIQUES**
-> **🚨 ATTENTION CRITIQUE :** Ces routes sont actuellement **PUBLIQUES** (aucune authentification). N'importe qui peut proposer des duels, accepter, ou saisir des scores !
+### ⚔️ Duels (`/api/duels`) 🔒 **ROUTES SÉCURISÉES**
+> **✅ SÉCURISÉ :** Ces routes nécessitent une authentification JWT. Accès autorisé uniquement aux utilisateurs connectés.
 
-- `GET /` - Liste tous les duels **[PUBLIC]**
+- `GET /` - Liste tous les duels **[AUTHENTIFICATION REQUISE]**
   - **Query params** : `page`, `limit`, `etat`, `duelisteId`
-- `GET /:id` - Détails d'un duel **[PUBLIC]**
-- `POST /` - Proposer un nouveau duel **[PUBLIC - DANGEREUX ⚠️]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `GET /:id` - Détails d'un duel **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `POST /` - Proposer un nouveau duel **[AUTHENTIFICATION REQUISE]**
   - **Body** : `provocateurId`, `adversaireId`, `arbitreId?`, `dateProgrammee?`, `notes?`
-- `PUT /:id/accepter` - Accepter un duel proposé **[PUBLIC - DANGEREUX ⚠️]**
-- `PUT /:id/refuser` - Refuser un duel proposé **[PUBLIC - À SÉCURISER]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `PUT /:id/accepter` - Accepter un duel proposé **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `PUT /:id/refuser` - Refuser un duel proposé **[AUTHENTIFICATION REQUISE]**
   - **Body** : `raison?`
-- `POST /:id/score` - Saisir un score **[PUBLIC - À SÉCURISER]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `POST /:id/score` - Saisir un score **[AUTHENTIFICATION REQUISE]**
   - **Body** : `scoreProvocateur`, `scoreAdversaire`, `touchesProvocateur`, `touchesAdversaire`
-- `GET /:id/proposition-score` - Voir les propositions de score en attente **[PUBLIC]**
-- `PUT /:id/accepter-score` - Accepter une proposition de score **[PUBLIC - À SÉCURISER]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `GET /:id/proposition-score` - Voir les propositions de score en attente **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `PUT /:id/accepter-score` - Accepter une proposition de score **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
 
-### 🏆 Classement (`/api/classement`)
-- `GET /` - Classement général
-  - **Query params** : `categorie`, `limit`
-- `GET /:id` - Statistiques détaillées d'un dueliste
+### 🏆 Classement (`/api/classement`) 🌍 **ROUTES PUBLIQUES**
+> **ℹ️ PUBLIC :** Ces routes sont accessibles sans authentification pour afficher les statistiques publiques.
 
-### 📤 Upload (`/api/upload`)
-- `POST /avatar` - Upload d'avatar
+- `GET /` - Classement général **[PUBLIC]**
+  - **Query params** : `categorie` (JUNIOR|SENIOR), `limit` (nombre de résultats)
+- `GET /junior` - Classement des juniors **[PUBLIC]**
+  - **Query params** : `limit`
+- `GET /stats/globales` - Statistiques globales **[PUBLIC]**
+- `GET /dueliste/:id` - Statistiques détaillées d'un dueliste **[PUBLIC]**
+- `POST /recalculer` - Recalculer les statistiques **[ADMIN UNIQUEMENT]**
+
+### 📤 Upload (`/api/upload`) 🔒 **ROUTES SÉCURISÉES**
+> **✅ SÉCURISÉ :** Upload de fichiers réservé aux utilisateurs authentifiés.
+
+- `POST /avatar` - Upload d'avatar **[AUTHENTIFICATION REQUISE]**
   - **File** : image (PNG, JPG, JPEG, WebP)
   - **Size limit** : 5MB
+  - **Headers** : `Authorization: Bearer <token>`
+- `DELETE /avatar` - Supprimer l'avatar **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
 
-### 🔐 Authentification (`/api/auth`)
-- `POST /register` - Inscription
-- `POST /login` - Connexion
-- `POST /refresh` - Renouveler le token
-- `POST /logout` - Déconnexion
+### 🔐 Authentification (`/api/auth`) 🌍 **ROUTES PUBLIQUES**
+> **ℹ️ PUBLIC :** Routes d'authentification accessibles sans token (sauf `/me`).
 
-### 📨 Invitations (`/api/invitations`)
-- `POST /` - Envoyer une invitation
-- `POST /accept/:token` - Accepter une invitation
-- `GET /verify/:token` - Vérifier une invitation
+- `POST /register` - Inscription **[PUBLIC]**
+  - **Body** : `email`, `password`, `pseudo`
+- `POST /login` - Connexion **[PUBLIC]**
+  - **Body** : `email`, `password`
+- `POST /verify-otp` - Vérification OTP **[PUBLIC]**
+  - **Body** : `email`, `otp`
+- `GET /me` - Profil utilisateur **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
+- `POST /logout` - Déconnexion **[PUBLIC]**
 
-### 📊 Tracking (`/api/track`)
-- `POST /event` - Enregistrer un événement de tracking
+### 📨 Invitations (`/api/invitations`) 🔒 **ROUTES SÉCURISÉES**
+> **✅ SÉCURISÉ :** Envoi d'invitations réservé aux utilisateurs authentifiés.
 
-### 👑 Administration (`/api/admin`)
+- `POST /email` - Envoyer une invitation par email **[AUTHENTIFICATION REQUISE]**
+  - **Body** : `email`, `recipientName?`
+  - **Headers** : `Authorization: Bearer <token>`
 
-#### Authentification Admin (`/api/admin/auth`)
-- `POST /login` - Connexion admin
-- `POST /refresh` - Renouveler token admin
+### 👤 Utilisateurs (`/api/users`) 🔒 **ROUTES SÉCURISÉES**
+> **✅ SÉCURISÉ :** Gestion des tokens push pour les notifications.
 
-#### Gestion Admin (`/api/admin`)
-- `GET /stats` - Statistiques générales
-- `GET /logs` - Logs système
+- `POST /:id/push-token` - Enregistrer token FCM **[AUTHENTIFICATION REQUISE]**
+  - **Body** : `pushToken`, `platform?` (web|android|ios)
+  - **Headers** : `Authorization: Bearer <token>`
+- `DELETE /:id/push-token` - Supprimer token FCM **[AUTHENTIFICATION REQUISE]**
+  - **Headers** : `Authorization: Bearer <token>`
 
-#### Duels Admin (`/api/admin/duels`)
-- `GET /` - Liste complète des duels
-- `PUT /:id/forcer-validation` - Forcer la validation d'un duel
-- `PUT /:id/annuler` - Annuler un duel
+### 📊 Tracking (`/api/track`) 🌍 **ROUTES PUBLIQUES**
+> **ℹ️ PUBLIC :** Routes de tracking anonymes pour les statistiques.
 
-#### Base de Données (`/api/admin/database`)
-- `GET /config` - Configuration actuelle de la DB
-- `POST /test-connection` - Tester une connexion DB
-- `POST /check-tables` - Vérifier les tables existantes
-- `POST /create-tables` - Créer les tables manquantes
-- `POST /check-content` - Vérifier le contenu des tables
-- `POST /migrate` - Migrer les données (3 modes)
-- `POST /finalize` - Finaliser la migration
+- `GET /email-open/:invitationId` - Tracker ouverture email **[PUBLIC]**
+- `POST /click/:invitationId` - Tracker clic sur lien **[PUBLIC]**
 
-#### Invitations Admin (`/api/admin/invitations`)
-- `GET /` - Liste des invitations
-- `POST /` - Créer une invitation
-- `DELETE /:id` - Supprimer une invitation
+### 👑 Administration (`/api/admin`) 🔒 **ACCÈS ADMIN UNIQUEMENT**
+> **🔐 SUPER-SÉCURISÉ :** Toutes les routes admin nécessitent une authentification administrateur spéciale.
+
+#### Authentification Admin (`/api/admin/auth`) 🌍
+- `POST /login` - Connexion admin **[PUBLIC]**
+  - **Body** : `email`, `password`
+- `POST /refresh` - Renouveler token admin **[PUBLIC]**
+
+#### Gestion Générale (`/api/admin`) 🔒
+- `GET /users` - Liste des utilisateurs **[ADMIN]**
+  - **Query params** : `page`, `limit`, `search`
+  - **Headers** : `Authorization: Bearer <admin_token>`
+- `GET /search` - Recherche globale **[ADMIN]**
+  - **Query params** : `q` (terme de recherche), `type` (users|duellistes|duels)
+
+#### Gestion des Duels (`/api/admin/duels`) 🔒
+- `GET /` - Liste complète des duels avec filtres admin **[ADMIN]**
+  - **Query params** : `page`, `limit`, `etat`, `search`
+  - **Headers** : `Authorization: Bearer <admin_token>`
+- `GET /statistiques` - Statistiques des duels **[ADMIN]**
+- `DELETE /:id` - Supprimer un duel **[ADMIN]**
+  - **Body** : `raison` (raison de suppression)
+- `PUT /:id/forcer-validation` - Forcer la validation d'un duel **[ADMIN]**
+  - **Body** : `scoreProvocateur`, `scoreAdversaire`, `touchesProvocateur`, `touchesAdversaire`
+
+#### Gestion des Invitations (`/api/admin/invitations`) 🔒
+- `GET /` - Liste des invitations **[ADMIN]**
+  - **Query params** : `page`, `limit`, `status`, `search`
+  - **Headers** : `Authorization: Bearer <admin_token>`
+- `GET /stats` - Statistiques des invitations **[ADMIN]**
+- `POST /:id/resend` - Renvoyer une invitation **[ADMIN]**
+- `DELETE /:id` - Supprimer une invitation **[ADMIN]**
+- `POST /bulk-delete` - Suppression en lot **[ADMIN]**
+  - **Body** : `ids[]` (array d'IDs à supprimer)
+
+#### Migration de Base de Données (`/api/admin/database`) 🔒
+> **⚠️ LOCALHOST UNIQUEMENT :** Ces routes sont restreintes à `localhost` pour des raisons de sécurité.
+
+- `GET /config` - Configuration actuelle de la DB **[LOCALHOST ONLY]**
+- `POST /test-connection` - Tester une connexion DB **[LOCALHOST ONLY]**
+  - **Body** : `provider`, `host`, `port`, `database`, `user`, `password`
+- `POST /check-tables` - Vérifier les tables existantes **[LOCALHOST ONLY]**
+- `POST /create-tables` - Créer les tables manquantes **[LOCALHOST ONLY]**
+- `POST /check-content` - Vérifier le contenu des tables **[LOCALHOST ONLY]**
+- `POST /migrate-data` - Migrer les données **[ADMIN + LOCALHOST]**
+  - **Body** : `mode` (fusion|ecrasement|skip), `config` (DB target)
+- `POST /finalize-migration` - Finaliser la migration **[LOCALHOST ONLY]**
+- `POST /switch` - Basculer vers la nouvelle DB **[LOCALHOST ONLY]**
+- `GET /providers` - Liste des providers supportés **[PUBLIC]**
+
+## 🔐 Sécurité et Authentification
+
+### 🎯 Niveaux de Sécurité
+
+**🌍 PUBLIC** : Accessible sans authentification
+- Routes d'authentification (`/auth/login`, `/auth/register`)
+- Classements et statistiques (`/classement/*`)
+- Tracking anonyme (`/track/*`)
+
+**🔒 AUTHENTIFICATION REQUISE** : Token JWT utilisateur nécessaire
+- Gestion des duellistes (`/duellistes/*`)
+- Gestion des duels (`/duels/*`)
+- Upload de fichiers (`/upload/*`)
+- Gestion du profil (`/users/*`)
+- Invitations (`/invitations/*`)
+
+**🔐 ADMIN UNIQUEMENT** : Token JWT administrateur nécessaire
+- Toutes les routes `/admin/*` (sauf `/admin/auth`)
+- Supervision et modération
+- Gestion avancée
+
+**🏠 LOCALHOST UNIQUEMENT** : Accès restreint à l'IP locale
+- Migration de base de données (`/admin/database/*`)
+- Configuration système critique
+
+### 🔑 Authentification JWT
+
+#### Utilisateurs Standard
+```bash
+# Obtenir un token
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+
+# Utiliser le token
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Administrateurs
+```bash
+# Obtenir un token admin
+POST /api/admin/auth/login
+{
+  "email": "admin@example.com",
+  "password": "admin_password"
+}
+
+# Utiliser le token admin
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### 🛡️ Protection et Middlewares
+- **Helmet** : Protection des headers HTTP
+- **CORS** : Configuration cross-origin sécurisée
+- **Rate Limiting** : Protection contre les attaques par déni de service
+- **Validation stricte** : Toutes les entrées sont validées
+- **Sanitisation** : Protection contre les injections XSS/SQL
 
 ## 🗄️ Base de Données
 
