@@ -161,39 +161,37 @@ Chaque composant dispose de sa documentation détaillée :
 - Scripts de démarrage automatisés
 - Troubleshooting et optimisation
 
-## 🎯 Cas d'Usage
+## 🎯 Modes de Déploiement
 
-### 🏟️ Club d'Escrime
+### 🚀 Production Docker (Recommandé)
 ```bash
-# Déploiement Docker complet
+# Démarrage complet avec MySQL
 ./start.sh
 
-# Accès :
-# - Maîtres d'armes : Interface admin pour supervision
-# - Escrimeurs : App mobile pour défis quotidiens
-# - Site web : Plugin WordPress pour communication
+# Accès aux services :
+# http://localhost:5173        - Application web
+# http://localhost:5173/admin  - Panel admin
+# http://localhost:3003/api    - API REST
 ```
 
-### 🎓 École d'Escrime
+### 🛠️ Développement Local
 ```bash
-# Mode développement pour formations
+# Démarrage en mode développement avec SQLite
 ./start-dev.sh
 
-# Configuration :
-# - Base SQLite légère pour tests
-# - Interface web pour apprentissage
-# - Classement junior pour jeunes escrimeurs
+# Ou démarrage manuel :
+cd duel-api && npm run dev     # API sur port 3000
+cd duel-frontend && npm run dev # Frontend sur port 5173
 ```
 
-### 🌐 Fédération Régionale
+### 📱 Build Mobile Android
 ```bash
-# Déploiement production avec MySQL
-docker-compose up -d
-
-# Intégration :
-# - API pour applications tierces
-# - Plugin WordPress sur site officiel
-# - Mobile pour événements et compétitions
+# Application mobile native
+cd duel-mobile
+npm run build
+npx cap sync android
+npx cap open android
+# Build APK depuis Android Studio
 ```
 
 ## � Synchronisation et Données
