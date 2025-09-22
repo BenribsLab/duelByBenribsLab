@@ -1,5 +1,4 @@
 import api from './api';
-import adminAuthService from './adminAuthService';
 
 class AdminService {
   /**
@@ -8,8 +7,8 @@ class AdminService {
   async getUsers(page = 1, limit = 10) {
     try {
       const response = await api.get('/admin/users', {
-        params: { page, limit },
-        headers: adminAuthService.getAuthHeaders()
+        params: { page, limit }
+        // Authorization sera ajouté automatiquement par l'intercepteur
       });
       return response.data;
     } catch (error) {
@@ -23,8 +22,8 @@ class AdminService {
   async searchUsers(query, page = 1, limit = 10) {
     try {
       const response = await api.get('/admin/search', {
-        params: { q: query, page, limit },
-        headers: adminAuthService.getAuthHeaders()
+        params: { q: query, page, limit }
+        // Authorization sera ajouté automatiquement par l'intercepteur
       });
       return response.data;
     } catch (error) {
@@ -37,9 +36,8 @@ class AdminService {
    */
   async getUserById(userId) {
     try {
-      const response = await api.get(`/admin/users/${userId}`, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.get(`/admin/users/${userId}`);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la récupération de l\'utilisateur');
@@ -51,9 +49,8 @@ class AdminService {
    */
   async updateUser(userId, userData) {
     try {
-      const response = await api.put(`/admin/users/${userId}`, userData, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.put(`/admin/users/${userId}`, userData);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la mise à jour');
@@ -65,9 +62,8 @@ class AdminService {
    */
   async createUser(userData) {
     try {
-      const response = await api.post('/admin/users', userData, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/users', userData);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la création de l\'utilisateur');
@@ -79,9 +75,8 @@ class AdminService {
    */
   async deleteUser(userId) {
     try {
-      const response = await api.delete(`/admin/users/${userId}`, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.delete(`/admin/users/${userId}`);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la suppression');
@@ -93,9 +88,8 @@ class AdminService {
    */
   async getStats() {
     try {
-      const response = await api.get('/admin/stats', {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.get('/admin/stats');
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la récupération des statistiques');
@@ -108,8 +102,8 @@ class AdminService {
   async getActivity(page = 1, limit = 20) {
     try {
       const response = await api.get('/admin/activity', {
-        params: { page, limit },
-        headers: adminAuthService.getAuthHeaders()
+        params: { page, limit }
+        // Authorization sera ajouté automatiquement par l'intercepteur
       });
       return response.data;
     } catch (error) {
@@ -122,9 +116,8 @@ class AdminService {
    */
   async validateUser(userId) {
     try {
-      const response = await api.post(`/admin/users/${userId}/validate`, {}, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post(`/admin/users/${userId}/validate`, {});
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la validation');
@@ -150,8 +143,8 @@ class AdminService {
         
         console.log('Params envoyés à l\'API:', cleanParams);
         const response = await api.get('/admin/duels', {
-          params: cleanParams,
-          headers: adminAuthService.getAuthHeaders()
+          params: cleanParams
+          // Authorization sera ajouté automatiquement par l'intercepteur
         });
         return response.data;
       } catch (error) {
@@ -167,9 +160,8 @@ class AdminService {
      */
     getStatistiques: async () => {
       try {
-        const response = await api.get('/admin/duels/statistiques', {
-          headers: adminAuthService.getAuthHeaders()
-        });
+        const response = await api.get('/admin/duels/statistiques');
+        // Authorization sera ajouté automatiquement par l'intercepteur
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.error || 'Erreur lors de la récupération des statistiques');
@@ -182,8 +174,8 @@ class AdminService {
     supprimer: async (id, raison) => {
       try {
         const response = await api.delete(`/admin/duels/${id}`, {
-          data: { raison },
-          headers: adminAuthService.getAuthHeaders()
+          data: { raison }
+          // Authorization sera ajouté automatiquement par l'intercepteur
         });
         return response.data;
       } catch (error) {
@@ -196,9 +188,8 @@ class AdminService {
      */
     forcerValidation: async (id, scoreData) => {
       try {
-        const response = await api.put(`/admin/duels/${id}/forcer-validation`, scoreData, {
-          headers: adminAuthService.getAuthHeaders()
-        });
+        const response = await api.put(`/admin/duels/${id}/forcer-validation`, scoreData);
+        // Authorization sera ajouté automatiquement par l'intercepteur
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.error || 'Erreur lors de la validation forcée');

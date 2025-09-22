@@ -1,5 +1,4 @@
 import api from './api';
-import adminAuthService from './adminAuthService';
 
 class DatabaseService {
   constructor() {
@@ -11,9 +10,8 @@ class DatabaseService {
    */
   async getCurrentConfig() {
     try {
-      const response = await api.get('/admin/database/config', {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.get('/admin/database/config');
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la récupération de la configuration');
@@ -25,9 +23,8 @@ class DatabaseService {
    */
   async getSupportedProviders() {
     try {
-      const response = await api.get('/admin/database/providers', {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.get('/admin/database/providers');
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la récupération des fournisseurs supportés');
@@ -39,9 +36,8 @@ class DatabaseService {
    */
   async testConnection(config) {
     try {
-      const response = await api.post('/admin/database/test-connection', config, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/test-connection', config);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors du test de connexion');
@@ -53,9 +49,8 @@ class DatabaseService {
    */
   async migrateDatabase(newConfig) {
     try {
-      const response = await api.post('/admin/database/migrate', newConfig, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/migrate', newConfig);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la migration');
@@ -64,9 +59,8 @@ class DatabaseService {
 
   async checkTablesExist(config) {
     try {
-      const response = await api.post('/admin/database/check-tables', config, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/check-tables', config);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la vérification des tables');
@@ -75,9 +69,8 @@ class DatabaseService {
 
   async createTables(config) {
     try {
-      const response = await api.post('/admin/database/create-tables', config, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/create-tables', config);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la création des tables');
@@ -86,9 +79,8 @@ class DatabaseService {
 
   async checkTablesContent(config) {
     try {
-      const response = await api.post('/admin/database/check-content', config, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/check-content', config);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la vérification du contenu');
@@ -97,9 +89,8 @@ class DatabaseService {
 
   async migrateData(config) {
     try {
-      const response = await api.post('/admin/database/migrate-data', config, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/migrate-data', config);
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la migration des données');
@@ -108,9 +99,8 @@ class DatabaseService {
 
   async finalizeMigration(config) {
     try {
-      const response = await api.post('/admin/database/finalize-migration', { newConfig: config }, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/finalize-migration', { newConfig: config });
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors de la finalisation de la migration');
@@ -122,9 +112,8 @@ class DatabaseService {
    */
   async switchProvider(provider) {
     try {
-      const response = await api.post('/admin/database/switch', { provider }, {
-        headers: adminAuthService.getAuthHeaders()
-      });
+      const response = await api.post('/admin/database/switch', { provider });
+      // Authorization sera ajouté automatiquement par l'intercepteur
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Erreur lors du changement de base de données');
