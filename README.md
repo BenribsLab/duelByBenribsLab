@@ -121,7 +121,7 @@ Toutes les interfaces partagent la même API et offrent des fonctionnalités coh
 | **Authentification** | ✅ Complète | ✅ Utilisateur uniquement | ✅ Complète |
 | **Gestion Duels** | ✅ Interface complète | ✅ Optimisée tactile | ✅ Shortcodes flexibles |
 | **Administration** | ✅ Panel complet | ❌ Sécurité mobile | ❌ Read-only |
-| **Notifications** | 🔄 En développement | ✅ Push natives | ✅ Intégration WP |
+| **Notifications** | ✅ Puce indicateur | ✅ Push natives | ❌ Non disponible |
 | **Classements** | ✅ Tableaux avancés | ✅ Vue mobile | ✅ Widgets configurables |
 
 ### 📚 Documentation Spécialisée
