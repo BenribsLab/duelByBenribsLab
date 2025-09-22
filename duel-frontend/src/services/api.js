@@ -9,6 +9,69 @@ const api = axios.create({
   },
 });
 
+// Routes qui n'ont PAS besoin d'authentification
+const publicRoutes = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/health'
+];
+
+// Intercepteur de requête - Ajoute automatiquement le token d'authentification
+api.interceptors.request.use(
+  (config) => {
+    // Vérifier si cette route a besoin d'authentification
+    const isPublicRoute = publicRoutes.some(route => 
+      config.url && config.url.includes(route)
+    );
+    
+    // Si ce n'est pas une route publique, ajouter le token
+    if (!isPublicRoute) {
+      let token;
+      
+      // Déterminer quel token utiliser selon la route
+      if (config.url && config.url.includes('/admin/')) {
+        // Routes admin - utiliser le token admin
+        token = localStorage.getItem('admin_auth_token');
+      } else {
+        // Routes utilisateur normales - utiliser le token utilisateur
+        token = localStorage.getItem('token');
+      }
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Intercepteur de réponse - Gère les erreurs d'authentification
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expiré ou invalide
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Rediriger vers la page de connexion si ce n'est pas déjà une route d'auth
+      if (!window.location.pathname.includes('/login') && 
+          !window.location.pathname.includes('/register')) {
+        window.location.href = '/login';
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Services API
 export const duellistesService = {
   getAll: () => api.get('/duellistes'),
@@ -51,30 +114,22 @@ export const adminService = {
   // Gestion des duels
   duels: {
     getAll: (params = {}) => {
-      const token = localStorage.getItem('adminToken');
-      return api.get('/admin/duels', {
-        params,
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      return api.get('/admin/duels', { params });
+      // Authorization sera ajouté automatiquement par l'intercepteur
     },
     getStatistiques: () => {
-      const token = localStorage.getItem('adminToken');
-      return api.get('/admin/duels/statistiques', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      return api.get('/admin/duels/statistiques');
+      // Authorization sera ajouté automatiquement par l'intercepteur
     },
     supprimer: (id, raison) => {
-      const token = localStorage.getItem('adminToken');
       return api.delete(`/admin/duels/${id}`, {
-        data: { raison },
-        headers: { Authorization: `Bearer ${token}` }
+        data: { raison }
+        // Authorization sera ajouté automatiquement par l'intercepteur
       });
     },
     forcerValidation: (id, scoreData) => {
-      const token = localStorage.getItem('adminToken');
-      return api.put(`/admin/duels/${id}/forcer-validation`, scoreData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      return api.put(`/admin/duels/${id}/forcer-validation`, scoreData);
+      // Authorization sera ajouté automatiquement par l'intercepteur
     }
   }
 };
@@ -85,23 +140,16 @@ export const uploadService = {
     const formData = new FormData();
     formData.append('avatar', file);
     
-    // Récupérer le token d'authentification
-    const token = localStorage.getItem('token');
-    
     return api.post('/upload/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`,
+        // Authorization sera ajouté automatiquement par l'intercepteur
       },
     });
   },
   deleteAvatar: () => {
-    const token = localStorage.getItem('token');
-    return api.delete('/upload/avatar', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    return api.delete('/upload/avatar');
+    // Authorization sera ajouté automatiquement par l'intercepteur
   }
 };
 

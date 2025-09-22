@@ -36,11 +36,8 @@ class AdminAuthService {
         throw new Error('Aucun token administrateur');
       }
 
-      const response = await api.post('/admin/auth/verify', {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await api.post('/admin/auth/verify', {});
+      // Authorization sera ajouté automatiquement par l'intercepteur
 
       return response.data.success;
     } catch (error) {
@@ -56,11 +53,8 @@ class AdminAuthService {
     try {
       const token = this.getToken();
       if (token) {
-        await api.post('/admin/auth/logout', {}, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        await api.post('/admin/auth/logout', {});
+        // Authorization sera ajouté automatiquement par l'intercepteur
       }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
@@ -82,11 +76,8 @@ class AdminAuthService {
       const response = await api.post('/admin/auth/change-password', {
         currentPassword,
         newPassword
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
+      // Authorization sera ajouté automatiquement par l'intercepteur
 
       return response.data;
     } catch (error) {
