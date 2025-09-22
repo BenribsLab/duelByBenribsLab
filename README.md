@@ -27,7 +27,7 @@
 | Service | Technologie | Rôle | Documentation |
 |---------|-------------|------|---------------|
 | **🔧 API REST** | Node.js + Express + Prisma | Backend central avec authentification JWT | [📖 API README](./duel-api/README.md) |
-| **🐳 Conteneurisation** | Docker + Docker Compose | Déploiement simplifié | [📖 Docker Guide](./DOCKER.md) |
+| **🐳 Conteneurisation** | Docker + Docker Compose | Déploiement production | - |
 | **💾 Base de Données** | SQLite ↔ MySQL | Stockage avec switch dynamique | Voir API README |
 
 ## 🚀 Démarrage Rapide
@@ -40,15 +40,12 @@ git clone https://github.com/BenribsLab/DuelByBenribsLab.git
 cd DuelByBenribsLab
 
 # Démarrage production complet (API + Frontend + MySQL)
-./start.sh
-
-# Ou mode développement (SQLite uniquement)
-./start-dev.sh
+docker-compose up -d --build
 ```
 
 **Accès immédiat :**
 - 🌐 **Application** : http://localhost:5173
-- 🔧 **API** : http://localhost:3003/api (production) / http://localhost:3000/api (dev)
+- 🔧 **API** : http://localhost:3003/api
 - 📊 **Admin** : http://localhost:5173/admin
 
 ### 🛠️ Installation Développement
@@ -155,18 +152,18 @@ Chaque composant dispose de sa documentation détaillée :
 - Personnalisation CSS
 - Exemples d'utilisation
 
-#### 🐳 **[Configuration Docker](./DOCKER.md)**
-- Setup production et développement
-- Gestion multi-base SQLite ↔ MySQL
-- Scripts de démarrage automatisés
-- Troubleshooting et optimisation
+#### 🐳 **Configuration Docker**
+- Setup production avec MySQL
+- Conteneurisation API + Frontend
+- Variables d'environnement
+- Volumes et persistance de données
 
 ## 🎯 Modes de Déploiement
 
 ### 🚀 Production Docker (Recommandé)
 ```bash
 # Démarrage complet avec MySQL
-./start.sh
+docker-compose up -d --build
 
 # Accès aux services :
 # http://localhost:5173        - Application web
@@ -176,12 +173,15 @@ Chaque composant dispose de sa documentation détaillée :
 
 ### 🛠️ Développement Local
 ```bash
-# Démarrage en mode développement avec SQLite
-./start-dev.sh
+# Backend (Terminal 1)
+cd duel-api
+npm install
+npm run dev    # Port 3000
 
-# Ou démarrage manuel :
-cd duel-api && npm run dev     # API sur port 3000
-cd duel-frontend && npm run dev # Frontend sur port 5173
+# Frontend (Terminal 2)  
+cd duel-frontend
+npm install
+npm run dev    # Port 5173
 ```
 
 ### 📱 Build Mobile Android
@@ -292,7 +292,13 @@ docker -v  # >= 20.0.0
 # Installation complète
 git clone https://github.com/BenribsLab/DuelByBenribsLab.git
 cd DuelByBenribsLab
-./start-dev.sh  # Lance tout en mode développement
+
+# Production Docker
+docker-compose up -d --build
+
+# Ou développement local
+cd duel-api && npm install && npm run dev  # Terminal 1
+cd duel-frontend && npm install && npm run dev  # Terminal 2
 ```
 
 ### 📋 Guidelines
@@ -314,7 +320,6 @@ Projet open-source développé avec passion pour la communauté de l'escrime fra
 - 🌐 **Demo Live** : https://duel.benribs.fr
 - 📱 **APK Android** : [Releases GitHub](https://github.com/BenribsLab/DuelByBenribsLab/releases)
 - 📚 **Documentation API** : [API README](./duel-api/README.md)
-- 🐳 **Guide Docker** : [DOCKER.md](./DOCKER.md)
-- 🐛 **Issues** : [GitHub Issues](https://github.com/BenribsLab/DuelByBenribsLab/issues)
+-  **Issues** : [GitHub Issues](https://github.com/BenribsLab/DuelByBenribsLab/issues)
 
 **🤺 Développé avec passion pour faire vivre l'escrime à l'ère numérique !**

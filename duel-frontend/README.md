@@ -60,9 +60,6 @@ cd duelByBenribsLab
 
 2. **Lancer avec Docker Compose**
 ```bash
-# Mode développement
-docker-compose -f docker-compose.dev.yml up -d
-
 # Mode production
 docker-compose up -d --build
 ```
