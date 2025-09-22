@@ -1,217 +1,322 @@
-# Duel by Benribs Lab 🤺
+# 🤺 Duel by Benribs Lab
 
-## � Démarrage rapide
+**Écosystème complet de gestion de duels d'escrime** - Application web/mobile + API + Plugin WordPress pour gérer les défis, classements et communauté d'escrimeurs.
 
-### Avec Docker (Recommandé)
+## 🎯 Vision du Projet
+
+**Duel by Benribs Lab** démocratise l'organisation de duels d'escrime en offrant une plateforme moderne où tout escrimeur peut défier n'importe qui, valider ses résultats de façon transparente, et suivre sa progression dans un classement équitable basé sur les victoires.
+
+### ⚔️ Philosophie
+- **Défi universel** : Tout le monde peut défier tout le monde, sans restriction
+- **Validation collaborative** : Les joueurs valident leurs propres résultats
+- **Transparence totale** : Classements et statistiques visibles par tous
+- **Égalité des chances** : Même algorithme de classement pour tous
+
+## 🏗️ Écosystème Technique
+
+### 📱 Applications et Interfaces
+
+| Composant | Technologie | Utilisation | Documentation |
+|-----------|-------------|-------------|---------------|
+| **🌐 Application Web** | React 19 + Vite | Interface principale desktop/mobile | [📖 Frontend README](./duel-frontend/README.md) |
+| **📱 App Mobile** | React + Capacitor | Application native Android/iOS | [📖 Mobile README](./duel-mobile/README.md) |
+| **🗂️ Plugin WordPress** | PHP + Shortcodes | Intégration sur sites web | [📖 WordPress README](./WP_DuelByBenribsLab/README.md) |
+
+### ⚙️ Backend et Infrastructure
+
+| Service | Technologie | Rôle | Documentation |
+|---------|-------------|------|---------------|
+| **🔧 API REST** | Node.js + Express + Prisma | Backend central avec authentification JWT | [📖 API README](./duel-api/README.md) |
+| **🐳 Conteneurisation** | Docker + Docker Compose | Déploiement simplifié | [📖 Docker Guide](./DOCKER.md) |
+| **💾 Base de Données** | SQLite ↔ MySQL | Stockage avec switch dynamique | Voir API README |
+
+## 🚀 Démarrage Rapide
+
+### ⚡ Installation Express (Docker)
 
 ```bash
-# Mode production complet (avec MySQL)
+# Cloner le projet
+git clone https://github.com/BenribsLab/DuelByBenribsLab.git
+cd DuelByBenribsLab
+
+# Démarrage production complet (API + Frontend + MySQL)
 ./start.sh
 
-# Mode développement (SQLite uniquement)  
+# Ou mode développement (SQLite uniquement)
 ./start-dev.sh
-
-# Ou manuellement
-docker-compose up -d
 ```
 
-### Mode développement local
+**Accès immédiat :**
+- 🌐 **Application** : http://localhost:5173
+- 🔧 **API** : http://localhost:3003/api (production) / http://localhost:3000/api (dev)
+- 📊 **Admin** : http://localhost:5173/admin
+
+### 🛠️ Installation Développement
 
 ```bash
-# Backend
+# Backend (Terminal 1)
 cd duel-api
 npm install
-npm run dev
+npm run dev    # Port 3000
 
-# Frontend (nouveau terminal)
-cd duel-frontend  
+# Frontend (Terminal 2)  
+cd duel-frontend
 npm install
-npm run dev
+npm run dev    # Port 5173
+
+# Mobile (Terminal 3)
+cd duel-mobile
+npm install
+npm run dev    # Développement web
+# ou: npx cap run android (pour Android)
+
+# WordPress (Installation manuelle)
+cp -r WP_DuelByBenribsLab /wp-content/plugins/
+# Activer dans l'admin WordPress
 ```
 
-## �️ Architecture
+## 🎮 Fonctionnalités Principales
 
-- **Frontend** : React + Vite (port 80 en prod, 5173 en dev)
-- **Backend** : Node.js + Express + Prisma (port 3000)
-- **Base de données** : SQLite (par défaut) + MySQL (optionnel)
+### ⚔️ Système de Duels
+- **Défis ouverts** : Tout duelliste peut en défier un autre
+- **États dynamiques** : `proposé` → `accepté` → `validé`
+- **Validation flexible** : Par arbitre ou double saisie joueurs
+- **Calendrier** : Programmation optionnelle des rencontres
 
-## 🔄 Switch de base de données
+### 👥 Gestion des Duellistes
+- **Profils complets** : Pseudo, avatar, statistiques personnelles
+- **Authentification moderne** : JWT + OTP email ou mot de passe classique
+- **Données en temps réel** : Synchronisation automatique entre interfaces
 
-L'application supporte le basculement dynamique entre SQLite et MySQL :
+### 🏆 Classement Équitable
+1. **Victoires** (critère principal absolu)
+2. **Taux de victoire** (départage des égalités)
+3. **Indice touches** (touches données - reçues, plafonné ±5/duel)
 
-1. Accéder à `/admin` 
-2. Utiliser le switch SQLite/MySQL
-3. **En mode Docker** : redémarrage automatique du container
-4. **En mode local** : redémarrage manuel requis
+### � Tableaux de Bord
+- **Classement général** en temps réel
+- **Classement junior** (catégorie spécialisée)
+- **Statistiques individuelles** : V/D, ratio, évolution
+- **Historique complet** des affrontements
 
-## 📁 Structure du projet
+## � Sécurité et Authentification
 
+### 🛡️ Architecture de Sécurité
+- **Tokens JWT** avec expiration automatique
+- **Double authentification** : Token utilisateur + token admin
+- **Routes protégées** avec middleware automatique
+- **Sessions sécurisées** adaptées à chaque plateforme :
+  - **Web/Mobile** : localStorage avec intercepteurs Axios
+  - **WordPress** : Sessions PHP natives
+
+### 🔑 Modes d'Authentification
+- **Mode Email/OTP** : Codes à usage unique par email
+- **Mode Classique** : Pseudo + mot de passe
+- **Auto-détection** : Interface s'adapte selon l'identifiant saisi
+
+## 📱 Multi-Plateforme
+
+### 🌐 Expérience Uniforme
+Toutes les interfaces partagent la même API et offrent des fonctionnalités cohérentes :
+
+| Fonctionnalité | Web React | Mobile Capacitor | WordPress Plugin |
+|----------------|-----------|------------------|------------------|
+| **Authentification** | ✅ Complète | ✅ Utilisateur uniquement | ✅ Complète |
+| **Gestion Duels** | ✅ Interface complète | ✅ Optimisée tactile | ✅ Shortcodes flexibles |
+| **Administration** | ✅ Panel complet | ❌ Sécurité mobile | ❌ Read-only |
+| **Notifications** | 🔄 En développement | ✅ Push natives | ✅ Intégration WP |
+| **Classements** | ✅ Tableaux avancés | ✅ Vue mobile | ✅ Widgets configurables |
+
+### 📚 Documentation Spécialisée
+
+Chaque composant dispose de sa documentation détaillée :
+
+#### 🔧 **[API Backend](./duel-api/README.md)**
+- Endpoints complets avec exemples
+- Système d'authentification JWT
+- Architecture Prisma + Base de données
+- Configuration et déploiement
+
+#### 🌐 **[Frontend React](./duel-frontend/README.md)**
+- Architecture React 19 + Vite
+- Intercepteur Axios automatique
+- Composants et pages détaillés
+- Build et optimisation
+
+#### 📱 **[Mobile Capacitor](./duel-mobile/README.md)**
+- Configuration Android/iOS
+- Plugins natifs (notifications, caméra)
+- Build APK et déploiement
+- Différences avec le frontend
+
+#### 🗂️ **[Plugin WordPress](./WP_DuelByBenribsLab/README.md)**
+- 6 shortcodes configurables
+- Intégration sécurisée WordPress
+- Personnalisation CSS
+- Exemples d'utilisation
+
+#### 🐳 **[Configuration Docker](./DOCKER.md)**
+- Setup production et développement
+- Gestion multi-base SQLite ↔ MySQL
+- Scripts de démarrage automatisés
+- Troubleshooting et optimisation
+
+## 🎯 Cas d'Usage
+
+### 🏟️ Club d'Escrime
+```bash
+# Déploiement Docker complet
+./start.sh
+
+# Accès :
+# - Maîtres d'armes : Interface admin pour supervision
+# - Escrimeurs : App mobile pour défis quotidiens
+# - Site web : Plugin WordPress pour communication
 ```
-/
-├── docker-compose.yml         # Production avec MySQL
-├── docker-compose.dev.yml     # Développement SQLite only
-├── start.sh                   # Script démarrage production
-├── start-dev.sh               # Script démarrage développement
-├── DOCKER.md                  # Documentation Docker complète
-├── duel-api/
-│   ├── Dockerfile
-│   ├── .dockerignore
-│   └── src/
-└── duel-frontend/
-    ├── Dockerfile
-    ├── .dockerignore
-    ├── nginx.conf
-    └── src/
+
+### 🎓 École d'Escrime
+```bash
+# Mode développement pour formations
+./start-dev.sh
+
+# Configuration :
+# - Base SQLite légère pour tests
+# - Interface web pour apprentissage
+# - Classement junior pour jeunes escrimeurs
 ```
 
-**Exemple** :
+### 🌐 Fédération Régionale
+```bash
+# Déploiement production avec MySQL
+docker-compose up -d
+
+# Intégration :
+# - API pour applications tierces
+# - Plugin WordPress sur site officiel
+# - Mobile pour événements et compétitions
 ```
-Pseudo: "ZorroMask" ou "Pierre D."
-Avatar: [image optionnelle]
+
+## � Synchronisation et Données
+
+### � Cohérence Multi-Interface
+- **API Centrale** : Source unique de vérité
+- **Temps Réel** : Toutes les interfaces se synchronisent automatiquement
+- **Cache Intelligent** : Optimisation des performances selon la plateforme
+- **Validation Unique** : Règles métier centralisées dans l'API
+
+### 💾 Persistance des Données
+- **Profils utilisateurs** : Avatar, statistiques, préférences
+- **Historique complet** : Tous les duels avec métadonnées
+- **Classements calculés** : Mise à jour automatique à chaque validation
+- **Sessions** : Gestion sécurisée multi-plateforme
+
+## 🚧 Roadmap
+
+### ✅ Phase 1 - MVP Complet (Actuel)
+- [x] API REST complète avec authentification
+- [x] Interface web React responsive  
+- [x] Application mobile Android
+- [x] Plugin WordPress fonctionnel
+- [x] Système de duels et classements
+- [x] Déploiement Docker
+
+### 🔄 Phase 2 - Optimisation (En cours)
+- [ ] Notifications push mobiles
+- [ ] Mode offline basique
+- [ ] Interface d'administration avancée
+- [ ] Tests automatisés complets
+- [ ] Support iOS
+
+### 📋 Phase 3 - Extensions (Planifié)
+- [ ] Tournois organisés
+- [ ] API publique pour développeurs tiers
+- [ ] Analyses et statistiques avancées
+- [ ] Intégration réseaux sociaux
+- [ ] Support multilingue
+
+## 🛠️ Architecture Détaillée
+
+### 🔄 Flow de Données
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Frontend  │    │   Mobile    │    │ WordPress   │
+│    React    │    │  Capacitor  │    │   Plugin    │
+└──────┬──────┘    └──────┬──────┘    └──────┬──────┘
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          │
+                   ┌──────▼──────┐
+                   │  API REST   │
+                   │ Node.js +   │
+                   │ JWT Auth    │
+                   └──────┬──────┘
+                          │
+                   ┌──────▼──────┐
+                   │  Database   │
+                   │SQLite/MySQL │
+                   └─────────────┘
 ```
 
-### ⚔️ Duel
-Gestion complète du cycle de vie d'un affrontement :
+### 🔐 Sécurité Multi-Couches
+```
+Application Layer    │ Validation des entrées, sanitisation
+─────────────────────┼──────────────────────────────────────
+API Layer           │ JWT tokens, middleware d'auth
+─────────────────────┼──────────────────────────────────────  
+Database Layer      │ Requêtes préparées, isolation
+─────────────────────┼──────────────────────────────────────
+Infrastructure      │ Docker isolation, HTTPS
+```
 
-**Participants** :
-- **Provocateur** (Joueur A) : Celui qui lance le défi
-- **Adversaire** (Joueur B) : Celui qui reçoit la provocation
+## 📊 Métriques et Performance
 
-**États possibles** :
-1. `proposé` : Duel lancé, en attente de réponse
-2. `accepté` : Adversaire a accepté, prêt à jouer
-3. `refusé` : Adversaire a décliné
-4. `à jouer` : Duel programmé et accepté
-5. `en attente validation` : Scores saisis, validation en cours
-6. `validé` : Duel terminé et comptabilisé
+### 🎯 Objectifs de Performance
+- **API Response Time** : < 200ms moyenne
+- **Frontend Load** : < 2s première visite
+- **Mobile App Size** : < 10MB APK
+- **Database** : Support 1000+ utilisateurs simultanés
 
-**Métadonnées** :
-- **Date** : Optionnelle, peut rester "libre" pour flexibilité
-- **Arbitre/témoin** : Assignable optionnel, modifiable jusqu'à validation
+### 📈 Monitoring (Planifié)
+- Temps de réponse API par endpoint
+- Métriques d'usage par interface
+- Performance des requêtes base de données
+- Statistiques d'engagement utilisateur
 
-### 📊 Résultat
-Système de scoring simple et efficace :
+## 🤝 Contribution
 
-**Scores** :
-- Score Joueur A (nombre entier)
-- Score Joueur B (nombre entier)
-- **Contrainte** : Pas d'égalité possible (un joueur doit toujours gagner)
+### � Setup Développeur
+```bash
+# Prérequis
+node -v    # >= 18.0.0
+npm -v     # >= 9.0.0
+docker -v  # >= 20.0.0
 
-**Validation** :
-- **Mode Arbitre** : L'arbitre/témoin saisit → validation immédiate
-- **Mode Joueurs** : Double saisie concordante → validation automatique
+# Installation complète
+git clone https://github.com/BenribsLab/DuelByBenribsLab.git
+cd DuelByBenribsLab
+./start-dev.sh  # Lance tout en mode développement
+```
 
-**Exemples de scores valides** :
-- 5–3, 10–8, 15–12, 20–18
+### 📋 Guidelines
+- **Code Quality** : ESLint + Prettier sur tout le JavaScript
+- **Documentation** : README à jour pour chaque modification
+- **Tests** : Validation manuelle obligatoire avant commit
+- **Security** : Pas de secrets dans le code, variables d'environnement
 
-## 📏 Règles de validation
+## 📝 Licence
 
-### 🎯 Validation par Arbitre/Témoin
-- L'arbitre saisit le score final
-- Validation immédiate sans confirmation des joueurs
-- Score fait foi définitivement
+**MIT License** - Benribs Lab © 2025
 
-### 👥 Validation par Double Saisie
-1. Chaque joueur saisit le score de son côté
-2. Si les deux saisies correspondent → validation automatique
-3. Si divergence → signalement et résolution manuelle
-
-## 🏆 Système de Classement
-
-### 📊 Critères hiérarchiques (par ordre de priorité)
-
-1. **Victoires** (critère principal et absolu)
-   - Nombre total de matchs gagnés
-   - Critère déterminant principal
-
-2. **Taux de victoire** (critère de départage)
-   - Formule : `victoires ÷ matchs joués`
-   - Permet de départager les égalités en victoires
-
-3. **Indice touches** (critère tertiaire)
-   - Formule : `touches données - touches reçues`
-   - **Plafonnement** : Maximum ±5 par duel (évite les scores extrêmes)
-   - Utilisé uniquement en cas d'égalité parfaite
-
-### 📈 Exemple de classement
-
-| Joueur | Victoires | Matchs | Taux | Indice | Position |
-|--------|-----------|--------|------|--------|----------|
-| Bob    | 12        | 18     | 0,67 | +12    | 1er      |
-| Alice  | 12        | 20     | 0,60 | +8     | 2ème     |
-| Claire | 11        | 22     | 0,50 | +25    | 3ème     |
-
-**Explication** :
-- Bob devant Alice : même victoires, meilleur taux
-- Claire derrière : moins de victoires malgré plus d'activité
-
-## 🎮 Fonctionnalités principales
-
-### ⚔️ Gestion des défis
-- Interface de provocation intuitive
-- Système de notifications pour les défis
-- Calendrier des duels programmés
-
-### 📝 Saisie des résultats
-- Interface de scoring simple
-- Validation en temps réel
-- Historique des matchs
-
-### 📊 Tableaux de bord
-- Classement général en temps réel
-- Statistiques personnelles
-- Historique des confrontations
-
-## 🛠️ Spécifications techniques
-
-### 💾 Base de données
-Tables principales :
-- `duel_duellistes` : Profils des escrimeurs
-- `duel_matchs` : Duels et leurs états
-- `duel_resultats` : Scores et validations
-
-### 🔌 Intégration WordPress
-- Plugin autonome compatible multi-sites
-- Shortcodes pour intégration dans pages/articles
-- Interface d'administration dédiée
-
-## 🎯 Philosophie du projet
-
-### ⚖️ Égalité et Accessibilité
-- **Défi universel** : Tout le monde peut défier tout le monde
-- **Pas de barrières** : Aucune restriction d'âge ou de catégorie
-- **Autonomie** : Les joueurs gèrent leurs propres affrontements
-
-### 🏅 Récompenses équilibrées
-- **Victoires avant tout** : Critère principal incontournable
-- **Efficacité valorisée** : Taux de victoire récompensé
-- **Qualité technique** : Indice touches comme bonus
-
-### 🤝 Fair-play et Transparence
-- **Validation collaborative** : Pas de hiérarchie externe imposée
-- **Règles d'escrime respectées** : Application des règles traditionnelles
-- **Transparence totale** : Tous les résultats visibles par tous
-
-## 🚀 Phases de développement
-
-### Phase 1 : MVP (Minimum Viable Product)
-- Gestion des duellistes
-- Système de défis basique
-- Saisie et validation des résultats
-- Classement simple
-
-### Phase 2 : Améliorations
-- Interface utilisateur avancée
-- Notifications et calendrier
-- Statistiques détaillées
-- Système de badges/récompenses
-
-### Phase 3 : Extensions
-- Tournois organisés
-- Analyse des performances
-- Intégration réseaux sociaux
-- API pour applications mobiles
+Projet open-source développé avec passion pour la communauté de l'escrime française.
 
 ---
 
-**Développé avec ❤️ pour la communauté de l'escrime**
+## 🔗 Liens Rapides
+
+- 🌐 **Demo Live** : https://duel.benribs.fr
+- 📱 **APK Android** : [Releases GitHub](https://github.com/BenribsLab/DuelByBenribsLab/releases)
+- 📚 **Documentation API** : [API README](./duel-api/README.md)
+- 🐳 **Guide Docker** : [DOCKER.md](./DOCKER.md)
+- 🐛 **Issues** : [GitHub Issues](https://github.com/BenribsLab/DuelByBenribsLab/issues)
+
+**🤺 Développé avec passion pour faire vivre l'escrime à l'ère numérique !**
