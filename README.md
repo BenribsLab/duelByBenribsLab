@@ -19,7 +19,7 @@
 | Composant | Technologie | Utilisation | Documentation |
 |-----------|-------------|-------------|---------------|
 | **🌐 Application Web** | React 19 + Vite | Interface principale desktop/mobile | [📖 Frontend README](./duel-frontend/README.md) |
-| **📱 App Mobile** | React + Capacitor | Application native Android/iOS | [📖 Mobile README](./duel-mobile/README.md) |
+| **📱 App Mobile** | React + Capacitor | Application native Android | [📖 Mobile README](./duel-mobile/README.md) |
 | **🗂️ Plugin WordPress** | PHP + Shortcodes | Intégration sur sites web | [📖 WordPress README](./WP_DuelByBenribsLab/README.md) |
 
 ### ⚙️ Backend et Infrastructure
@@ -186,7 +186,7 @@ cd duel-frontend && npm run dev # Frontend sur port 5173
 
 ### 📱 Build Mobile Android
 ```bash
-# Application mobile native
+# Application mobile native Android uniquement
 cd duel-mobile
 npm run build
 npx cap sync android
