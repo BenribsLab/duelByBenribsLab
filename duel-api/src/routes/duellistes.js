@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
+const { authenticateToken } = require('../middleware/auth');
 
 const {
   getAllDuellistes,
@@ -116,10 +117,10 @@ const validateQuery = [
 ];
 
 // Routes
-router.get('/', validateQuery, getAllDuellistes);
-router.get('/:id', param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, getDuelisteById);
-router.post('/', validateCreateDueliste, createDueliste);
-router.put('/:id', validateUpdateDueliste, updateDueliste);
-router.delete('/:id', param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, deleteDueliste);
+router.get('/', authenticateToken, validateQuery, getAllDuellistes);
+router.get('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, getDuelisteById);
+router.post('/', authenticateToken, validateCreateDueliste, createDueliste);
+router.put('/:id', authenticateToken, validateUpdateDueliste, updateDueliste);
+router.delete('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, deleteDueliste);
 
 module.exports = router;

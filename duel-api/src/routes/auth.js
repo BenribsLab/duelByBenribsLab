@@ -54,7 +54,7 @@ router.post('/login', [
   
   body('password')
     .optional()
-    .custom((value, { _req }) => {
+    .custom((value) => {
       // Si un mot de passe est fourni, il doit avoir au moins 1 caractère
       if (value !== undefined && value !== null && value !== '' && value.length < 1) {
         throw new Error('Mot de passe trop court');

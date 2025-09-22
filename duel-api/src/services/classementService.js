@@ -125,7 +125,7 @@ async function recalculateStats(duelisteId) {
       }
       
       // Calculer l'indice touches (plafonné à ±5 par duel)
-      const diffTouches = scoreJoueur - scoreAdversaire;
+      // const diffTouches = scoreJoueur - scoreAdversaire;
       // const indiceDuel = Math.max(-5, Math.min(5, diffTouches)); // TODO: utiliser pour calcul avancé
       
       touchesDonnees += scoreJoueur;

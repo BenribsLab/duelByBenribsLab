@@ -195,7 +195,7 @@ class PushNotificationService {
   /**
    * Créer une notification pour la saisie d'un score
    */
-  createScoreNotification(saisisseur, adversaire) {
+  createScoreNotification(saisisseur) {
     return {
       title: 'Score saisi !',
       body: `${saisisseur.pseudo} a saisi le score de votre duel`,
@@ -210,7 +210,7 @@ class PushNotificationService {
   /**
    * Créer une notification pour l'acceptation d'un score
    */
-  createScoreAcceptedNotification(acceptant, proposant) {
+  createScoreAcceptedNotification(acceptant) {
     return {
       title: 'Score accepté !',
       body: `${acceptant.pseudo} a accepté votre proposition de score`,

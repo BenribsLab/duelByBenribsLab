@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
+// const { PrismaClient } = require('@prisma/client');
 const { execSync } = require('child_process');
-const sqlite3 = require('sqlite3').verbose();
+// const sqlite3 = require('sqlite3').verbose();
 
 class DatabaseConfigService {
   /**
@@ -586,7 +586,7 @@ class DatabaseConfigService {
     
     try {
       // 1. Utiliser Prisma pour lire depuis SQLite (comme l'admin le fait)
-      const { PrismaClient } = require('@prisma/client');
+      // const { PrismaClient } = require('@prisma/client');
       
       // Le client Prisma actuel (SQLite) - extraire prisma depuis l'objet exporté
       const { prisma } = require('../database');
@@ -647,7 +647,7 @@ class DatabaseConfigService {
       }
       
       let totalRecords = 0;
-      let migrationDetails = {
+      const migrationDetails = {
         duellistes: 0,
         duels: 0,
         validations_scores: 0,

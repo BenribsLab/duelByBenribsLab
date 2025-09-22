@@ -110,7 +110,7 @@ app.use('/api/invitations', require('./routes/invitations'));
 app.use('/api/track', require('./routes/tracking'));
 
 // Middleware de gestion d'erreurs
-app.use((err, req, res, _next) => {
+app.use((err, req, res, next) => {
   console.error('Erreur:', err);
   
   if (err.type === 'validation') {

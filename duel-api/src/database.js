@@ -12,7 +12,7 @@ async function runPrismaCommands() {
   
   try {
     console.log('🔧 Génération du client Prisma...');
-    const { stdout: generateOutput } = await execAsync('npx prisma generate');
+    await execAsync('npx prisma generate');
     console.log('✅ Client Prisma généré');
     
     console.log(`🗄️ Synchronisation de la base de données ${provider.toUpperCase()}...`);

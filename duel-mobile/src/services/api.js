@@ -1,13 +1,41 @@
 import axios from 'axios';
 import config from '../config';
 
-// Instance axios configurée
+// Créer l'instance axios
 const api = axios.create({
   baseURL: config.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Intercepteur pour ajouter automatiquement le token d'authentification
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Intercepteur de réponse pour gérer les erreurs d'authentification
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expiré ou invalide
+      localStorage.removeItem('token');
+      // Rediriger vers la page de connexion si nécessaire
+      // Note: La gestion de la redirection peut être ajoutée selon le routeur utilisé
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Services API
 export const duellistesService = {
@@ -45,12 +73,7 @@ export const classementService = {
 
 export const invitationsService = {
   send: (invitationData) => {
-    const token = localStorage.getItem('token');
-    return api.post('/invitations/email', invitationData, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    return api.post('/invitations/email', invitationData);
   }
 };
 
@@ -96,23 +119,14 @@ export const uploadService = {
     const formData = new FormData();
     formData.append('avatar', file);
     
-    // Récupérer le token d'authentification
-    const token = localStorage.getItem('token');
-    
     return api.post('/upload/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`,
       },
     });
   },
   deleteAvatar: () => {
-    const token = localStorage.getItem('token');
-    return api.delete('/upload/avatar', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    return api.delete('/upload/avatar');
   }
 };
 

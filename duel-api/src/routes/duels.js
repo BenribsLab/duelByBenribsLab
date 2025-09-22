@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
+const { authenticateToken } = require('../middleware/auth');
 
 const {
   getAllDuels,
@@ -135,21 +136,23 @@ const validateQuery = [
 ];
 
 // Routes principales
-router.get('/', validateQuery, getAllDuels);
-router.get('/:id', param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, getDuelById);
-router.post('/', validateProposerDuel, proposerDuel);
+router.get('/', authenticateToken, validateQuery, getAllDuels);
+router.get('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, getDuelById);
+router.post('/', authenticateToken, validateProposerDuel, proposerDuel);
 
 // Actions sur les duels
-router.put('/:id/accepter', validateAccepterDuel, accepterDuel);
-router.put('/:id/refuser', validateRefuserDuel, refuserDuel);
-router.put('/:id/score', validateSaisirScore, saisirScore);
+router.put('/:id/accepter', authenticateToken, validateAccepterDuel, accepterDuel);
+router.put('/:id/refuser', authenticateToken, validateRefuserDuel, refuserDuel);
+router.put('/:id/score', authenticateToken, validateSaisirScore, saisirScore);
 router.get('/:id/proposition', 
+  authenticateToken,
   param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'),
   query('duelisteId').isInt({ min: 1 }).withMessage('L\'ID du duelliste doit être un entier positif'),
   handleValidation, 
   getPropositionScore
 );
 router.put('/:id/accepter-proposition',
+  authenticateToken,
   param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'),
   body('duelisteId').isInt({ min: 1 }).withMessage('L\'ID du duelliste doit être un entier positif'),
   handleValidation,
