@@ -46,7 +46,7 @@ class AuthService {
   }
 
   // Créer un utilisateur avec mot de passe
-  async registerWithPassword(pseudo, password, email = null) {
+  async registerWithPassword(pseudo, password, email = null, categorie = 'SENIOR') {
     // Normaliser l'email
     const normalizedEmail = this.normalizeEmail(email);
     
@@ -80,7 +80,8 @@ class AuthService {
         email: normalizedEmail,
         passwordHash,
         authMode: 'PASSWORD',
-        emailVerified: normalizedEmail ? false : true // Si pas d'email, on considère comme "vérifié"
+        emailVerified: normalizedEmail ? false : true, // Si pas d'email, on considère comme "vérifié"
+        categorie
       }
     });
 
@@ -111,7 +112,7 @@ class AuthService {
   }
 
   // Créer un utilisateur avec OTP
-  async registerWithOTP(pseudo, email) {
+  async registerWithOTP(pseudo, email, categorie = 'SENIOR') {
     // Normaliser l'email
     const normalizedEmail = this.normalizeEmail(email);
     
@@ -145,7 +146,8 @@ class AuthService {
         authMode: 'OTP',
         emailVerified: false,
         otpCode,
-        otpExpiry
+        otpExpiry,
+        categorie
       }
     });
 

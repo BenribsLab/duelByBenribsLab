@@ -4,7 +4,7 @@ class AuthController {
   // POST /api/auth/register
   async register(req, res) {
     try {
-      const { pseudo, email, password, authMode, hasEmailAccess } = req.body;
+      const { pseudo, email, password, authMode, hasEmailAccess, categorie } = req.body;
 
       // Validation de base
       if (!pseudo) {
@@ -30,7 +30,7 @@ class AuthController {
           });
         }
 
-        result = await authService.registerWithOTP(pseudo, email);
+              const result = await authService.registerWithOTP(pseudo, email, categorie);
         
         // TODO: Envoyer l'OTP par email via Microsoft Graph
         console.log(`OTP pour ${email}: ${result.otpCode}`);
@@ -52,7 +52,7 @@ class AuthController {
           });
         }
 
-        result = await authService.registerWithPassword(pseudo, password, email);
+              const result = await authService.registerWithPassword(pseudo, password, email, categorie);
 
         return res.status(201).json({
           success: true,
