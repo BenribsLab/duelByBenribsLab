@@ -26,14 +26,15 @@ class Duel_Login_Shortcode {
         // Initialiser l'authentification
         $auth = new Duel_Auth();
         
+        // Les actions sont maintenant traitées dans duel-plugin.php avant l'affichage
+        // Récupérer les données de session pour l'affichage
+        $form_data = self::get_form_display_data($auth);
+        
         // Si déjà connecté, afficher un message
         if ($auth->is_logged_in()) {
             $user = $auth->get_user_data();
             return self::render_already_logged_in($user);
         }
-        
-        // Traitement des formulaires
-        $form_data = self::handle_form_submission($auth);
         
         // Générer le HTML
         ob_start();
@@ -91,61 +92,11 @@ class Duel_Login_Shortcode {
     }
     
     /**
-     * Traiter les soumissions de formulaire
+     * Récupérer les données pour l'affichage du formulaire
      */
-    private static function handle_form_submission($auth) {
-        if (!isset($_POST['duel_action'])) {
-            return array();
-        }
-        
-        // Vérifier le nonce de sécurité
-        if (!wp_verify_nonce($_POST['duel_nonce'], 'duel_login_nonce')) {
-            return array('error' => 'Erreur de sécurité');
-        }
-        
-        switch ($_POST['duel_action']) {
-            case 'back_to_start':
-                // Redirection vers la page actuelle pour retour au début
-                wp_redirect($_SERVER['REQUEST_URI']);
-                exit;
-                
-            case 'login_step1':
-                $identifier = sanitize_text_field($_POST['identifier']);
-                if (empty($identifier)) {
-                    return array('error' => 'Veuillez entrer votre email ou pseudo');
-                }
-                return $auth->login_step1($identifier);
-                
-            case 'login_password':
-                $pseudo = sanitize_text_field($_POST['pseudo']);
-                $password = $_POST['password']; // Ne pas sanitizer le mot de passe
-                if (empty($pseudo) || empty($password)) {
-                    return array('error' => 'Pseudo et mot de passe requis');
-                }
-                $result = $auth->login_with_password($pseudo, $password);
-                if ($result['success']) {
-                    // Redirection après connexion réussie
-                    wp_redirect($_SERVER['REQUEST_URI']);
-                    exit;
-                }
-                return $result;
-                
-            case 'verify_otp':
-                $email = sanitize_email($_POST['email']);
-                $otp_code = sanitize_text_field($_POST['otp_code']);
-                if (empty($email) || empty($otp_code)) {
-                    return array('error' => 'Email et code OTP requis');
-                }
-                $result = $auth->verify_otp($email, $otp_code);
-                if ($result['success']) {
-                    // Redirection après connexion réussie
-                    wp_redirect($_SERVER['REQUEST_URI']);
-                    exit;
-                }
-                return $result;
-        }
-        
-        return array();
+    private static function get_form_display_data($auth) {
+        // Retourner les données stockées en session ou vides
+        return isset($_SESSION['duel_login_step']) ? $_SESSION['duel_login_step'] : array();
     }
     
     /**

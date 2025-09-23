@@ -23,10 +23,7 @@ function duel_duels_shortcode($atts) {
     $token = $_SESSION['duel_token'];
     $user = $_SESSION['duel_user'];
     
-    // Traitement des actions AJAX
-    if (isset($_POST['duel_action'])) {
-        return handle_duel_action($api_client, $token, $user);
-    }
+    // Les actions sont maintenant traitées dans duel-plugin.php avant l'affichage
     
     try {
         // Récupérer les duels de l'utilisateur
@@ -66,6 +63,27 @@ function duel_duels_shortcode($atts) {
                         </a>
                     <?php endforeach; ?>
                 </div>
+            </div>
+
+            <!-- Sous-titre mobile pour clarifier l'onglet actuel -->
+            <div class="duel-mobile-subtitle">
+                <?php 
+                $current_tab_config = null;
+                foreach (get_tabs_config($tabs_counts) as $tab) {
+                    if ($tab['id'] === $active_tab) {
+                        $current_tab_config = $tab;
+                        break;
+                    }
+                }
+                if ($current_tab_config): ?>
+                    <h3 class="duel-mobile-title">
+                        <?php echo get_tab_icon($current_tab_config['id']); ?> 
+                        <?php echo esc_html(get_full_tab_label($current_tab_config['id'])); ?>
+                        <?php if ($current_tab_config['count'] > 0): ?>
+                            <span class="duel-mobile-count">(<?php echo intval($current_tab_config['count']); ?>)</span>
+                        <?php endif; ?>
+                    </h3>
+                <?php endif; ?>
             </div>
 
             <!-- Contenu des onglets -->
@@ -297,11 +315,11 @@ function calculate_tabs_counts($duels, $user_id) {
 
 function get_tabs_config($counts) {
     return array(
-        array('id' => 'invitations-recues', 'label' => 'Invitations Reçues', 'count' => $counts['invitations-recues']),
+        array('id' => 'invitations-recues', 'label' => 'Invitations', 'count' => $counts['invitations-recues']),
         array('id' => 'mes-defis', 'label' => 'Mes Défis', 'count' => $counts['mes-defis']),
-        array('id' => 'duels-actifs', 'label' => 'Duels Actifs', 'count' => $counts['duels-actifs']),
-        array('id' => 'duels-recents', 'label' => 'Duels Récents', 'count' => $counts['duels-recents']),
-        array('id' => 'nouveau-duel', 'label' => 'Inviter Quelqu\'un', 'count' => 0)
+        array('id' => 'duels-actifs', 'label' => 'En Cours', 'count' => $counts['duels-actifs']),
+        array('id' => 'duels-recents', 'label' => 'Terminés', 'count' => $counts['duels-recents']),
+        array('id' => 'nouveau-duel', 'label' => 'Inviter', 'count' => 0)
     );
 }
 
@@ -314,6 +332,17 @@ function get_tab_icon($tab_id) {
         'nouveau-duel' => '👤+'
     );
     return isset($icons[$tab_id]) ? $icons[$tab_id] : '•';
+}
+
+function get_full_tab_label($tab_id) {
+    $full_labels = array(
+        'invitations-recues' => 'Invitations Reçues',
+        'mes-defis' => 'Mes Défis',
+        'duels-actifs' => 'Duels En Cours',
+        'duels-recents' => 'Duels Terminés',
+        'nouveau-duel' => 'Inviter Quelqu\'un'
+    );
+    return isset($full_labels[$tab_id]) ? $full_labels[$tab_id] : 'Section';
 }
 
 function render_invitations_recues($duels, $user_id) {
@@ -592,6 +621,10 @@ function render_nouveau_duel_form($duellistes, $user) {
 function handle_duel_action($api_client, $token, $user) {
     $action = sanitize_text_field($_POST['duel_action']);
     
+    // Traiter les erreurs de validation en affichant un message et en stoppant
+    if (empty($_POST['duel_id']) || !is_numeric($_POST['duel_id'])) {
+        wp_die('ID de duel invalide.', 'Erreur', array('back_link' => true));
+    }
     // Vérification du nonce pour les actions de création et score
     if ($action === 'create') {
         if (!isset($_POST['duel_nonce']) || !wp_verify_nonce($_POST['duel_nonce'], 'duel_create_action')) {

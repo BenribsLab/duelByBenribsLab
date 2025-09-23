@@ -31,6 +31,9 @@ class Duel_Register_Shortcode {
         // Initialiser l'authentification
         $auth = new Duel_Auth();
         
+        // Traitement des formulaires AVANT l'affichage pour les redirections
+        $form_data = self::handle_form_submission($auth);
+        
         // Si déjà connecté, rediriger ou afficher un message
         if ($auth->is_logged_in()) {
             return '<div class="duel-register-container"><div class="duel-success">✅ Vous êtes connecté avec succès !</div></div>';
@@ -40,9 +43,6 @@ class Duel_Register_Shortcode {
         if (isset($_GET['registered']) && $_GET['registered'] == '1') {
             return '<div class="duel-register-container"><div class="duel-success">✅ Inscription et connexion réussies ! Vous pouvez maintenant utiliser votre compte.</div></div>';
         }
-        
-        // Traitement des formulaires
-        $form_data = self::handle_form_submission($auth);
         
         // Générer le HTML
         ob_start();

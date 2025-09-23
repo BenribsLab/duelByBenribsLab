@@ -99,6 +99,9 @@ class DuelByBenribsLab {
             session_start();
         }
         
+        // Traiter les actions de duels AVANT l'affichage
+        $this->handle_duel_actions();
+        
         // Enregistrer les shortcodes
         $this->register_shortcodes();
     }
@@ -112,6 +115,115 @@ class DuelByBenribsLab {
         add_shortcode('duel_profile', array('Duel_Profile_Shortcode', 'render'));
         add_shortcode('duel_home', array('Duel_Home_Shortcode', 'render'));
         // Le shortcode classement est enregistré dans son propre fichier
+    }
+    
+    /**
+     * Traiter les actions de duels avant l'affichage
+     */
+    private function handle_duel_actions() {
+        if (isset($_POST['duel_action'])) {
+            
+            // Traiter la déconnexion
+            if ($_POST['duel_action'] === 'logout') {
+                if (wp_verify_nonce($_POST['duel_nonce'], 'duel_logout_nonce')) {
+                    if (class_exists('Duel_Auth')) {
+                        $auth = new Duel_Auth();
+                        $auth->logout();
+                        wp_redirect($_SERVER['REQUEST_URI']);
+                        exit;
+                    }
+                }
+                return;
+            }
+            
+            // Traiter les actions de connexion/inscription
+            if (in_array($_POST['duel_action'], ['login_step1', 'login_password', 'verify_otp', 'back_to_start'])) {
+                if (class_exists('Duel_Auth')) {
+                    $auth = new Duel_Auth();
+                    
+                    // Traiter selon le type d'action
+                    if ($_POST['duel_action'] === 'back_to_start') {
+                        wp_redirect($_SERVER['REQUEST_URI']);
+                        exit;
+                    }
+                    
+                    // Autres actions de connexion
+                    $this->handle_auth_actions($auth);
+                }
+                return;
+            }
+            
+            // Traiter les actions de duels seulement si connecté
+            if (isset($_SESSION['duel_token']) && isset($_SESSION['duel_user'])) {
+                // Inclure les classes nécessaires
+                if (class_exists('Duel_API_Client')) {
+                    $api_client = new Duel_API_Client();
+                    $token = $_SESSION['duel_token'];
+                    $user = $_SESSION['duel_user'];
+                    
+                    // Traiter l'action et rediriger
+                    if (function_exists('handle_duel_action')) {
+                        handle_duel_action($api_client, $token, $user);
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Traiter les actions d'authentification
+     */
+    private function handle_auth_actions($auth) {
+        if (!wp_verify_nonce($_POST['duel_nonce'], 'duel_login_nonce')) {
+            return;
+        }
+        
+        switch ($_POST['duel_action']) {
+            case 'login_step1':
+                $identifier = sanitize_text_field($_POST['identifier']);
+                if (!empty($identifier)) {
+                    $result = $auth->login_step1($identifier);
+                    // Stocker le résultat en session pour l'affichage
+                    $_SESSION['duel_login_step'] = $result;
+                    if (isset($result['success']) && $result['success']) {
+                        wp_redirect($_SERVER['REQUEST_URI']);
+                        exit;
+                    }
+                }
+                break;
+                
+            case 'login_password':
+                $pseudo = sanitize_text_field($_POST['pseudo']);
+                $password = $_POST['password'];
+                if (!empty($pseudo) && !empty($password)) {
+                    $result = $auth->login_with_password($pseudo, $password);
+                    if (isset($result['success']) && $result['success']) {
+                        // Supprimer les données de session après connexion réussie
+                        unset($_SESSION['duel_login_step']);
+                        wp_redirect($_SERVER['REQUEST_URI']);
+                        exit;
+                    } else {
+                        $_SESSION['duel_login_step'] = $result;
+                    }
+                }
+                break;
+                
+            case 'verify_otp':
+                $email = sanitize_email($_POST['email']);
+                $otp_code = sanitize_text_field($_POST['otp_code']);
+                if (!empty($email) && !empty($otp_code)) {
+                    $result = $auth->verify_otp($email, $otp_code);
+                    if (isset($result['success']) && $result['success']) {
+                        // Supprimer les données de session après connexion réussie
+                        unset($_SESSION['duel_login_step']);
+                        wp_redirect($_SERVER['REQUEST_URI']);
+                        exit;
+                    } else {
+                        $_SESSION['duel_login_step'] = $result;
+                    }
+                }
+                break;
+        }
     }
     
     /**

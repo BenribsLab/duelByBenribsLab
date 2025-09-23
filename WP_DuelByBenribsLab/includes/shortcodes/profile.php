@@ -40,14 +40,7 @@ class Duel_Profile_Shortcode {
             return '<div class="duel-profile-container"><div class="duel-error">Erreur lors du chargement du profil</div></div>';
         }
         
-        // Gérer la déconnexion
-        if (isset($_POST['duel_action']) && $_POST['duel_action'] === 'logout') {
-            if (wp_verify_nonce($_POST['duel_nonce'], 'duel_logout_nonce')) {
-                $auth->logout();
-                wp_redirect($_SERVER['REQUEST_URI']);
-                exit;
-            }
-        }
+        // La déconnexion est maintenant traitée dans duel-plugin.php avant l'affichage
         
         // Gérer le changement de catégorie
         $category_message = '';
