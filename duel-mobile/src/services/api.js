@@ -1,5 +1,6 @@
 import axios from 'axios';
 import config from '../config';
+import secureStorage from './secureStorage';
 
 // Créer l'instance axios
 const api = axios.create({
@@ -11,8 +12,8 @@ const api = axios.create({
 
 // Intercepteur pour ajouter automatiquement le token d'authentification
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
+  async (config) => {
+    const token = await secureStorage.getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,10 +27,10 @@ api.interceptors.request.use(
 // Intercepteur de réponse pour gérer les erreurs d'authentification
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
       // Token expiré ou invalide
-      localStorage.removeItem('token');
+      await secureStorage.clearAuthToken();
       // Rediriger vers la page de connexion si nécessaire
       // Note: La gestion de la redirection peut être ajoutée selon le routeur utilisé
     }

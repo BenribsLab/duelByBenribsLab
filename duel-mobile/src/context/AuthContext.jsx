@@ -149,13 +149,15 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setToken(null);
       
-      // Nettoyer le stockage sécurisé
+      // Nettoyer le stockage sécurisé - VERSION AMÉLIORÉE
+      console.log('🔄 Déconnexion avec nettoyage complet...');
       await secureStorage.clearAllAuthData();
       
       // Nettoyer axios
       delete axios.defaults.headers.common['Authorization'];
       
       console.log('✅ Déconnexion et nettoyage sécurisé terminés');
+      console.log('💡 Si vous rencontrez des problèmes (notifications, etc.), utilisez le diagnostic dans les paramètres');
       
       // Désactiver les notifications push lors de la déconnexion
       pushNotificationService.unregister();

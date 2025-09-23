@@ -12,6 +12,7 @@ const Register = () => {
     pseudo: '',
     email: '',
     password: '',
+    confirmPassword: '',
     authMode: '',
     moinsDe15ans: false
   });
@@ -47,6 +48,21 @@ const Register = () => {
     setError('');
 
     try {
+      // Validation des mots de passe si mode PASSWORD
+      if (formData.authMode === 'PASSWORD') {
+        if (formData.password.length < 6) {
+          setError('Le mot de passe doit contenir au moins 6 caractères');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (formData.password !== formData.confirmPassword) {
+          setError('Les mots de passe ne correspondent pas');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const registrationData = {
         pseudo: formData.pseudo,
         authMode: formData.authMode,
@@ -352,29 +368,57 @@ const Register = () => {
 
             {/* Mot de passe (seulement si mode PASSWORD) */}
             {formData.authMode === 'PASSWORD' && (
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mot de passe <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+              <>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mot de passe <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                      placeholder="Minimum 6 caractères"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                    />
                   </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                    placeholder="Minimum 6 caractères"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                  />
+                  <p className="mt-1 text-xs text-gray-600">
+                    Minimum 6 caractères
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-gray-600">
-                  Minimum 6 caractères
-                </p>
-              </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirmer le mot de passe <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                      placeholder="Retapez votre mot de passe"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-600">
+                      Les mots de passe ne correspondent pas
+                    </p>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Catégorie d'âge */}
@@ -396,7 +440,7 @@ const Register = () => {
           <div>
             <button
               type="submit"
-              disabled={isLoading || !formData.pseudo || (formData.authMode === 'OTP' && !formData.email) || (formData.authMode === 'PASSWORD' && !formData.password)}
+              disabled={isLoading || !formData.pseudo || (formData.authMode === 'OTP' && !formData.email) || (formData.authMode === 'PASSWORD' && (!formData.password || !formData.confirmPassword || formData.password !== formData.confirmPassword))}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
