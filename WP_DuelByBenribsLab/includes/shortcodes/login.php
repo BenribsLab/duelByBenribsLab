@@ -65,10 +65,13 @@ class Duel_Login_Shortcode {
         
         <script>
         jQuery(document).ready(function($) {
-            // Gestion du retour en arrière
+            // Gestion du retour en arrière - utiliser redirection PHP au lieu de reload JS
             $('.duel-back-button').on('click', function(e) {
                 e.preventDefault();
-                location.reload();
+                // Soumettre un formulaire pour déclencher redirection PHP
+                var form = $('<form method="post"><input type="hidden" name="duel_action" value="back_to_start"></form>');
+                $('body').append(form);
+                form.submit();
             });
             
             // Gestion spécifique des liens d'inscription pour contourner l'interception
@@ -101,6 +104,11 @@ class Duel_Login_Shortcode {
         }
         
         switch ($_POST['duel_action']) {
+            case 'back_to_start':
+                // Redirection vers la page actuelle pour retour au début
+                wp_redirect($_SERVER['REQUEST_URI']);
+                exit;
+                
             case 'login_step1':
                 $identifier = sanitize_text_field($_POST['identifier']);
                 if (empty($identifier)) {

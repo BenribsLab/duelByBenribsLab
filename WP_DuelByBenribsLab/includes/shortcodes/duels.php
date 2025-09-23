@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 function duel_duels_shortcode($atts) {
     // Vérifier si l'utilisateur est connecté
     if (!isset($_SESSION['duel_token']) || !isset($_SESSION['duel_user'])) {
-        return '<div class="duel-error">Vous devez être connecté pour accéder aux duels. <a href="https://escrime-cey.fr/connexion-duel-by-benribs-lab/" onclick="window.location.reload()">Se connecter</a></div>';
+        return '<div class="duel-error">Vous devez être connecté pour accéder aux duels. <a href="https://escrime-cey.fr/connexion-duel-by-benribs-lab/">Se connecter</a></div>';
     }
 
     // Vérification de l'existence de la classe
@@ -231,18 +231,22 @@ function duel_duels_shortcode($atts) {
             formData.append('duel_id', duelId);
             formData.append('user_id', <?php echo intval($user['id']); ?>);
 
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(data => {
-                window.location.reload();
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Une erreur est survenue');
-            });
+            // Utiliser redirection PHP au lieu d'AJAX pour éviter les conflits
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+            
+            // Ajouter les données comme inputs cachés
+            for (let [key, value] of formData) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
         }
         </script>
         
