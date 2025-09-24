@@ -9,8 +9,7 @@ const {
   getDuelisteById,
   createDueliste,
   updateDueliste,
-  deleteDueliste,
-  testChampNotifications
+  deleteDueliste
 } = require('../controllers/duellistesController');
 
 // Validation middleware pour la création
@@ -123,8 +122,5 @@ router.get('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage(
 router.post('/', authenticateToken, validateCreateDueliste, createDueliste);
 router.put('/:id', authenticateToken, validateUpdateDueliste, updateDueliste);
 router.delete('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, deleteDueliste);
-
-// TEMPORAIRE - Route de test pour le nouveau champ
-router.get('/test/champ-notifications', testChampNotifications);
 
 module.exports = router;

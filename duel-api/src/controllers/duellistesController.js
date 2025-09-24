@@ -280,66 +280,10 @@ async function deleteDueliste(req, res) {
   }
 }
 
-/**
- * TEMPORAIRE - Test du nouveau champ derniereConsultationNotifications
- */
-async function testChampNotifications(req, res) {
-  try {
-    console.log('🧪 Test du champ derniereConsultationNotifications');
-    
-    // Test lecture
-    const user = await prisma.dueliste.findFirst();
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé' });
-    }
-    
-    console.log('✅ Lecture - Utilisateur:', user.pseudo);
-    console.log('✅ Lecture - Champ derniereConsultationNotifications:', user.derniereConsultationNotifications);
-    
-    // Test écriture
-    const now = new Date();
-    await prisma.dueliste.update({
-      where: { id: user.id },
-      data: { derniereConsultationNotifications: now }
-    });
-    console.log('✅ Écriture réussie avec la date:', now);
-    
-    // Vérification
-    const updated = await prisma.dueliste.findUnique({ 
-      where: { id: user.id },
-      select: { 
-        id: true, 
-        pseudo: true, 
-        derniereConsultationNotifications: true 
-      }
-    });
-    
-    res.json({
-      success: true,
-      message: '✅ Test du champ derniereConsultationNotifications réussi !',
-      data: {
-        utilisateur: updated.pseudo,
-        ancienneValeur: user.derniereConsultationNotifications,
-        nouvelleValeur: updated.derniereConsultationNotifications,
-        testReussi: true
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Erreur test champ:', error);
-    res.status(500).json({
-      success: false,
-      message: '❌ Erreur lors du test du champ',
-      error: error.message
-    });
-  }
-}
-
 module.exports = {
   getAllDuellistes,
   getDuelisteById,
   createDueliste,
   updateDueliste,
-  deleteDueliste,
-  testChampNotifications // TEMPORAIRE
+  deleteDueliste
 };
