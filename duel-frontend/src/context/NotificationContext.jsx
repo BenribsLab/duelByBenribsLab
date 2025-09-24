@@ -27,7 +27,9 @@ export const NotificationProvider = ({ children }) => {
         ? new Date(derniereConsultation)
         : new Date('1970-01-01');
 
-      console.log('Filtrage notifications depuis:', cutoffDate);
+      console.log('🔍 USER dans loadNotifications:', user);
+      console.log('📅 derniereConsultationNotifications:', derniereConsultation);
+      console.log('⏰ Filtrage notifications depuis:', cutoffDate);
 
       const response = await duelsService.getMyDuels(user.id);
       const duels = response.data.data;
@@ -165,7 +167,9 @@ export const NotificationProvider = ({ children }) => {
       await refreshUser();
       console.log('✅ Données utilisateur rechargées');
       
-      // Note: on ne recharge pas loadNotifications() ici pour garder l'affichage
+      // 3. Recharger les notifications pour que le filtrage prenne effet immédiatement
+      await loadNotifications();
+      console.log('✅ Notifications rechargées avec nouveau filtrage');
       
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour des notifications:', error);
