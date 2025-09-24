@@ -95,7 +95,12 @@ export const AuthProvider = ({ children }) => {
 
   // Fonction pour recharger les données utilisateur depuis l'API
   const refreshUser = async () => {
-    if (!user?.id || !token) return;
+    console.log('🔄 refreshUser called - user?.id:', user?.id, 'token:', !!token);
+    
+    if (!user?.id || !token) {
+      console.log('❌ refreshUser: Pas de user.id ou token, retour undefined');
+      return;
+    }
 
     try {
       console.log('🔄 refreshUser: Appel API pour user', user.id);
