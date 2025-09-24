@@ -93,6 +93,9 @@ async function getDuelisteById(req, res) {
         }
       }
     });
+
+    // ✅ S'assurer que derniereConsultationNotifications est inclus
+    console.log('🔍 getDuelisteById - derniereConsultationNotifications:', dueliste?.derniereConsultationNotifications);
     
     if (!dueliste) {
       return res.status(404).json({
