@@ -280,10 +280,64 @@ async function deleteDueliste(req, res) {
   }
 }
 
+/**
+ * Marquer les notifications comme consultées
+ */
+async function markNotificationsAsRead(req, res) {
+  try {
+    const duelisteId = parseInt(req.params.id);
+    const userId = req.user.id; // Depuis le middleware auth
+    
+    // Vérifier que l'utilisateur modifie ses propres données
+    if (duelisteId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez marquer que vos propres notifications comme lues'
+      });
+    }
+    
+    // Vérifier que le duelliste existe
+    const dueliste = await prisma.dueliste.findUnique({
+      where: { id: duelisteId }
+    });
+    
+    if (!dueliste) {
+      return res.status(404).json({
+        success: false,
+        message: 'Duelliste introuvable'
+      });
+    }
+    
+    // Mettre à jour la date de dernière consultation
+    const now = new Date();
+    await prisma.dueliste.update({
+      where: { id: duelisteId },
+      data: { derniereConsultationNotifications: now }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Notifications marquées comme consultées',
+      data: {
+        duelisteId: duelisteId,
+        derniereConsultationNotifications: now
+      }
+    });
+    
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour des notifications'
+    });
+  }
+}
+
 module.exports = {
   getAllDuellistes,
   getDuelisteById,
   createDueliste,
   updateDueliste,
-  deleteDueliste
+  deleteDueliste,
+  markNotificationsAsRead
 };

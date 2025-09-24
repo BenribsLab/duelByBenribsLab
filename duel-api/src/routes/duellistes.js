@@ -9,7 +9,8 @@ const {
   getDuelisteById,
   createDueliste,
   updateDueliste,
-  deleteDueliste
+  deleteDueliste,
+  markNotificationsAsRead
 } = require('../controllers/duellistesController');
 
 // Validation middleware pour la création
@@ -122,5 +123,13 @@ router.get('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage(
 router.post('/', authenticateToken, validateCreateDueliste, createDueliste);
 router.put('/:id', authenticateToken, validateUpdateDueliste, updateDueliste);
 router.delete('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, deleteDueliste);
+
+// Route pour marquer les notifications comme consultées
+router.put('/:id/notifications/mark-read', 
+  authenticateToken, 
+  param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), 
+  handleValidation, 
+  markNotificationsAsRead
+);
 
 module.exports = router;

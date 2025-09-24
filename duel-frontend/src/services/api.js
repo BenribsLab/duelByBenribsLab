@@ -79,6 +79,7 @@ export const duellistesService = {
   create: (dueliste) => api.post('/duellistes', dueliste),
   update: (id, dueliste) => api.put(`/duellistes/${id}`, dueliste),
   delete: (id) => api.delete(`/duellistes/${id}`),
+  markNotificationsAsRead: (id) => api.put(`/duellistes/${id}/notifications/mark-read`),
 };
 
 export const duelsService = {

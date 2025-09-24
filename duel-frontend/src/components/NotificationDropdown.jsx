@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, markNotificationsAsRead } = useNotifications();
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -41,7 +41,14 @@ const NotificationDropdown = () => {
     }
   };
 
-  // Gérer le clic sur une notification
+  // Gérer le clic sur le bouton notification
+  const handleToggleDropdown = () => {
+    if (!isOpen) {
+      // Marquer les notifications comme lues quand on ouvre la dropdown
+      markNotificationsAsRead();
+    }
+    setIsOpen(!isOpen);
+  };
   const handleNotificationClick = (notification) => {
     markAsRead(notification.id);
     navigate(notification.link);
@@ -66,7 +73,7 @@ const NotificationDropdown = () => {
     <div className="relative" ref={dropdownRef}>
       {/* Bouton notification */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleDropdown}
         className="relative p-2 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-colors"
       >
         <Bell className="h-6 w-6" />
