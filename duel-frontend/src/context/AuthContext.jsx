@@ -105,9 +105,10 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔄 refreshUser: Appel API pour user', user.id);
       const response = await axios.get(`${config.API_URL}/duellistes/${user.id}`);
+      console.log('🔍 refreshUser: Réponse complète de l\'API:', response.data);
       const freshUserData = response.data.data;
       console.log('📡 refreshUser: Données reçues de l\'API:', freshUserData);
-      console.log('📅 refreshUser: derniereConsultationNotifications dans l\'API:', freshUserData.derniereConsultationNotifications);
+      console.log('📅 refreshUser: derniereConsultationNotifications dans l\'API:', freshUserData?.derniereConsultationNotifications);
       
       updateUser(freshUserData);
       console.log('✅ refreshUser: updateUser appelé');
