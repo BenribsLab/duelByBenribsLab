@@ -93,6 +93,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Fonction pour recharger les données utilisateur depuis l'API
+  const refreshUser = async () => {
+    if (!user?.id || !token) return;
+
+    try {
+      const response = await axios.get(`${config.API_URL}/duellistes/${user.id}`);
+      const freshUserData = response.data.data;
+      updateUser(freshUserData);
+      return freshUserData;
+    } catch (error) {
+      console.error('Erreur lors du rechargement des données utilisateur:', error);
+      throw error;
+    }
+  };
+
   // Vérifier si l'utilisateur est authentifié
   const isAuthenticated = () => {
     return !!(user && token);
@@ -138,6 +153,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
+    refreshUser,
     isAuthenticated,
     checkTokenValidity
   };

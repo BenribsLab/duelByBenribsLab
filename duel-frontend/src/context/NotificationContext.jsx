@@ -14,7 +14,7 @@ export const useNotifications = () => {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   // Fonction pour charger les notifications avec filtrage intelligent
   const loadNotifications = async () => {
@@ -152,16 +152,38 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
-  // Marquer les notifications comme consultées (appel API)
+  // Marquer les notifications comme consultées (appel API uniquement)
   const markNotificationsAsRead = async () => {
     if (!user?.id) return;
     
     try {
+      // 1. Appeler l'API pour mettre à jour la date en base
       await duellistesService.markNotificationsAsRead(user.id);
-      setNotifications([]); // Vider immédiatement les notifications
-      console.log('✅ Notifications marquées comme consultées');
+      console.log('✅ Notifications marquées comme consultées en base');
+      
+      // 2. Recharger les données utilisateur pour avoir la nouvelle date
+      await refreshUser();
+      console.log('✅ Données utilisateur rechargées');
+      
+      // Note: on ne recharge pas loadNotifications() ici pour garder l'affichage
+      
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour des notifications:', error);
+    }
+  };
+
+  // Marquer toutes les notifications comme lues ET vider le dropdown
+  const markAllAsReadAndClear = async () => {
+    try {
+      // 1. Marquer en base
+      await markNotificationsAsRead();
+      
+      // 2. Vider le dropdown immédiatement
+      setNotifications([]);
+      
+      console.log('✅ Toutes les notifications effacées');
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'effacement des notifications:', error);
     }
   };
 
@@ -187,6 +209,7 @@ export const NotificationProvider = ({ children }) => {
     markAsRead,
     markAllAsRead,
     markNotificationsAsRead,
+    markAllAsReadAndClear,
     refresh: loadNotifications,
   };
 
