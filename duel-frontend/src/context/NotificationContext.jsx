@@ -18,20 +18,25 @@ export const NotificationProvider = ({ children }) => {
 
   // Fonction pour charger les notifications avec filtrage intelligent
   const loadNotifications = async () => {
-    if (!user?.id) return;
+    return loadNotificationsWithFreshUser(user);
+  };
+
+  // Fonction pour charger les notifications avec des données utilisateur spécifiques
+  const loadNotificationsWithFreshUser = async (userData) => {
+    if (!userData?.id) return;
 
     try {
       // Récupérer la date de dernière consultation
-      const derniereConsultation = user.derniereConsultationNotifications;
+      const derniereConsultation = userData.derniereConsultationNotifications;
       const cutoffDate = derniereConsultation
         ? new Date(derniereConsultation)
         : new Date('1970-01-01');
 
-      console.log('🔍 USER dans loadNotifications:', user);
+      console.log('🔍 USER dans loadNotifications:', userData);
       console.log('📅 derniereConsultationNotifications:', derniereConsultation);
       console.log('⏰ Filtrage notifications depuis:', cutoffDate);
 
-      const response = await duelsService.getMyDuels(user.id);
+      const response = await duelsService.getMyDuels(userData.id);
       const duels = response.data.data;
 
       // On prend tous les duels récents (sans filtrage par cutoffDate encore)
@@ -55,7 +60,7 @@ export const NotificationProvider = ({ children }) => {
 
       // Invitations reçues
       const invitationsRecues = duelsRecents.filter(
-        (d) => d.etat === 'PROPOSE' && d.adversaire.id === user.id
+        (d) => d.etat === 'PROPOSE' && d.adversaire.id === userData.id
       );
 
       invitationsRecues.forEach((duel) => {
@@ -74,7 +79,7 @@ export const NotificationProvider = ({ children }) => {
       const defisAcceptes = duelsRecents.filter(
         (d) =>
           d.etat === 'A_JOUER' &&
-          d.provocateur.id === user.id &&
+          d.provocateur.id === userData.id &&
           new Date() - new Date(d.dateAcceptation) < 24 * 60 * 60 * 1000
       );
 
@@ -92,7 +97,7 @@ export const NotificationProvider = ({ children }) => {
 
       // Propositions de score
       const propositionsScore = duelsRecents.filter(
-        (d) => d.etat === 'PROPOSE_SCORE' && (d.provocateur.id === user.id || d.adversaire.id === user.id)
+        (d) => d.etat === 'PROPOSE_SCORE' && (d.provocateur.id === userData.id || d.adversaire.id === userData.id)
       );
 
       for (const duel of propositionsScore) {
@@ -125,15 +130,15 @@ export const NotificationProvider = ({ children }) => {
       const duelsTermines = duelsRecents.filter(
         (d) =>
           d.etat === 'VALIDE' &&
-          (d.provocateur.id === user.id || d.adversaire.id === user.id) &&
+          (d.provocateur.id === userData.id || d.adversaire.id === userData.id) &&
           d.dateValidation &&
           new Date() - new Date(d.dateValidation) < 24 * 60 * 60 * 1000
       );
 
       duelsTermines.forEach((duel) => {
-        const adversaire = duel.provocateur.id === user.id ? duel.adversaire : duel.provocateur;
-        const monScore = duel.provocateur.id === user.id ? duel.scoreProvocateur : duel.scoreAdversaire;
-        const scoreAdversaire = duel.provocateur.id === user.id ? duel.scoreAdversaire : duel.scoreProvocateur;
+        const adversaire = duel.provocateur.id === userData.id ? duel.adversaire : duel.provocateur;
+        const monScore = duel.provocateur.id === userData.id ? duel.scoreProvocateur : duel.scoreAdversaire;
+        const scoreAdversaire = duel.provocateur.id === userData.id ? duel.scoreAdversaire : duel.scoreProvocateur;
         const victoire = monScore > scoreAdversaire;
 
         newNotifications.push({
@@ -179,10 +184,9 @@ export const NotificationProvider = ({ children }) => {
       const freshUser = await refreshUser();
       console.log('✅ Données utilisateur rechargées');
       console.log('🆕 APRES refreshUser - freshUser.derniereConsultationNotifications:', freshUser?.derniereConsultationNotifications);
-      console.log('🆕 APRES refreshUser - user.derniereConsultationNotifications:', user.derniereConsultationNotifications);
       
-      // 3. Recharger les notifications pour que le filtrage prenne effet immédiatement
-      await loadNotifications();
+      // 3. Recharger les notifications en utilisant les données fraîches
+      await loadNotificationsWithFreshUser(freshUser);
       console.log('✅ Notifications rechargées avec nouveau filtrage');
       
     } catch (error) {
