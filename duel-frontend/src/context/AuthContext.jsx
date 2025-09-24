@@ -98,9 +98,15 @@ export const AuthProvider = ({ children }) => {
     if (!user?.id || !token) return;
 
     try {
+      console.log('🔄 refreshUser: Appel API pour user', user.id);
       const response = await axios.get(`${config.API_URL}/duellistes/${user.id}`);
       const freshUserData = response.data.data;
+      console.log('📡 refreshUser: Données reçues de l\'API:', freshUserData);
+      console.log('📅 refreshUser: derniereConsultationNotifications dans l\'API:', freshUserData.derniereConsultationNotifications);
+      
       updateUser(freshUserData);
+      console.log('✅ refreshUser: updateUser appelé');
+      
       return freshUserData;
     } catch (error) {
       console.error('Erreur lors du rechargement des données utilisateur:', error);

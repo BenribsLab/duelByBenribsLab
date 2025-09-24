@@ -34,20 +34,22 @@ export const NotificationProvider = ({ children }) => {
       const response = await duelsService.getMyDuels(user.id);
       const duels = response.data.data;
 
-      // FILTRAGE INTELLIGENT : ne traiter que les duels récents
+      // On prend tous les duels récents (sans filtrage par cutoffDate encore)
       const duelsRecents = duels.filter((duel) => {
         const dateCreation = new Date(duel.dateCreation);
         const dateAcceptation = duel.dateAcceptation ? new Date(duel.dateAcceptation) : null;
         const dateValidation = duel.dateValidation ? new Date(duel.dateValidation) : null;
+        const now = new Date();
 
+        // Garder les duels qui ont eu une activité dans les 7 derniers jours
         return (
-          dateCreation > cutoffDate ||
-          (dateAcceptation && dateAcceptation > cutoffDate) ||
-          (dateValidation && dateValidation > cutoffDate)
+          (now - dateCreation) < 7 * 24 * 60 * 60 * 1000 ||
+          (dateAcceptation && (now - dateAcceptation) < 7 * 24 * 60 * 60 * 1000) ||
+          (dateValidation && (now - dateValidation) < 7 * 24 * 60 * 60 * 1000)
         );
       });
 
-      console.log(`Duels filtrés: ${duelsRecents.length}/${duels.length} duels récents`);
+      console.log(`Duels récents: ${duelsRecents.length}/${duels.length} duels`);
 
       const newNotifications = [];
 
@@ -145,10 +147,17 @@ export const NotificationProvider = ({ children }) => {
         });
       });
 
-      // Trier par date
-      newNotifications.sort((a, b) => b.timestamp - a.timestamp);
+      // FILTRAGE FINAL : Supprimer les notifications antérieures à la dernière consultation
+      const notificationsFiltered = newNotifications.filter(notification => {
+        return notification.timestamp > cutoffDate;
+      });
 
-      setNotifications(newNotifications);
+      console.log(`🔍 Notifications filtrées: ${notificationsFiltered.length}/${newNotifications.length} notifications (après cutoff: ${cutoffDate})`);
+
+      // Trier par date
+      notificationsFiltered.sort((a, b) => b.timestamp - a.timestamp);
+
+      setNotifications(notificationsFiltered);
     } catch (error) {
       console.error('Erreur lors du chargement des notifications:', error);
     }
@@ -159,13 +168,18 @@ export const NotificationProvider = ({ children }) => {
     if (!user?.id) return;
     
     try {
+      console.log('🔄 AVANT API - user.derniereConsultationNotifications:', user.derniereConsultationNotifications);
+      
       // 1. Appeler l'API pour mettre à jour la date en base
       await duellistesService.markNotificationsAsRead(user.id);
       console.log('✅ Notifications marquées comme consultées en base');
       
       // 2. Recharger les données utilisateur pour avoir la nouvelle date
-      await refreshUser();
+      console.log('🔄 Avant refreshUser...');
+      const freshUser = await refreshUser();
       console.log('✅ Données utilisateur rechargées');
+      console.log('🆕 APRES refreshUser - freshUser.derniereConsultationNotifications:', freshUser?.derniereConsultationNotifications);
+      console.log('🆕 APRES refreshUser - user.derniereConsultationNotifications:', user.derniereConsultationNotifications);
       
       // 3. Recharger les notifications pour que le filtrage prenne effet immédiatement
       await loadNotifications();
