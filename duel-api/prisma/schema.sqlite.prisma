@@ -25,6 +25,7 @@ model Dueliste {
   indiceTouches   Int               @default(0)
   categorie       String            @default("SENIOR")
   pushToken       String?
+  derniereConsultationNotifications DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   duelsArbires    Duel[]            @relation("DuelsArbires")
