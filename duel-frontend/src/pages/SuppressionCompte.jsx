@@ -31,11 +31,21 @@ const SuppressionCompte = () => {
           </div>
 
           <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-gray-900">Depuis l'application</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Depuis le site ou l'application</h2>
             <p className="text-gray-700">
-              Connectez-vous, puis rendez-vous dans <strong>Paramètres</strong>. Une section
-              « Supprimer mon compte », en bas de page, permet de le faire vous-même,
-              immédiatement.
+              Rendez-vous dans <strong>Paramètres</strong> — sur le site comme dans l'application
+              mobile. Une section « Supprimer mon compte », en bas de page, permet de le faire
+              vous-même, immédiatement.
+            </p>
+            <Link
+              to="/app/parametres"
+              className="inline-block px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+            >
+              Aller à mes paramètres
+            </Link>
+            <p className="text-sm text-gray-500">
+              Si vous n'êtes pas connecté, ce lien vous demandera de vous connecter d'abord, puis
+              vous y amènera directement.
             </p>
           </section>
 
