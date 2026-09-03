@@ -46,11 +46,13 @@ const NotificationDropdown = () => {
   const handleToggleDropdown = () => {
     const willBeOpen = !isOpen;
     setIsOpen(willBeOpen);
-    
-    // Si on ouvre le dropdown pour la première fois
-    if (willBeOpen && !hasBeenOpened) {
+
+    // Marquer comme consulté à chaque ouverture (et non seulement la première,
+    // sinon les notifications arrivées ensuite resteraient éternellement
+    // comptées comme nouvelles). La liste reste affichée : seul le compteur
+    // retombe à zéro, on a donc le temps de lire.
+    if (willBeOpen) {
       setHasBeenOpened(true);
-      // Marquer comme "consulté" en arrière-plan (sans vider le dropdown)
       markNotificationsAsRead();
     }
   };
@@ -123,7 +125,9 @@ const NotificationDropdown = () => {
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    className={`p-4 cursor-pointer transition-colors ${
+                      notification.isUnread ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
+                    }`}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Icône */}
@@ -133,8 +137,11 @@ const NotificationDropdown = () => {
 
                       {/* Contenu */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 flex items-center">
                           {notification.title}
+                          {notification.isUnread && (
+                            <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+                          )}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">
                           {notification.message}

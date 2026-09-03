@@ -759,6 +759,7 @@ const NouveauDuelForm = ({ duellistes, onDuelCreated }) => {
             duellistes={duellistes}
             onSelect={handleMemberSelect}
             currentUserId={user?.id}
+            selectedMember={selectedMember}
             placeholder="Tapez le pseudo d'un duelliste..."
           />
           {selectedMember && (

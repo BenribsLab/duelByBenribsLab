@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { duelsService, duellistesService } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -14,11 +14,25 @@ export const useNotifications = () => {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
+  // Notifications écartées manuellement (bouton ✕). Le serveur ne mémorise
+  // qu'une date globale de dernière consultation, pas un état par notification :
+  // on garde donc cet écartement côté session, sinon l'élément réapparaîtrait au
+  // prochain sondage.
+  const [dismissedIds, setDismissedIds] = useState(() => new Set());
   const { user, refreshUser } = useAuth();
+
+  // Le sondage périodique ne se recrée que si l'identifiant change : sans ces
+  // références, son closure garderait indéfiniment la première version de
+  // `user` et de `dismissedIds`, et rappellerait des notifications déjà lues ou
+  // fermées toutes les 30 secondes.
+  const userRef = useRef(user);
+  const dismissedIdsRef = useRef(dismissedIds);
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { dismissedIdsRef.current = dismissedIds; }, [dismissedIds]);
 
   // Fonction pour charger les notifications avec filtrage intelligent
   const loadNotifications = async () => {
-    return loadNotificationsWithFreshUser(user);
+    return loadNotificationsWithFreshUser(userRef.current);
   };
 
   // Fonction pour charger les notifications avec des données utilisateur spécifiques
@@ -152,17 +166,21 @@ export const NotificationProvider = ({ children }) => {
         });
       });
 
-      // FILTRAGE FINAL : Supprimer les notifications antérieures à la dernière consultation
-      const notificationsFiltered = newNotifications.filter(notification => {
-        return notification.timestamp > cutoffDate;
-      });
-
-      console.log(`🔍 Notifications filtrées: ${notificationsFiltered.length}/${newNotifications.length} notifications (après cutoff: ${cutoffDate})`);
+      // La date de dernière consultation ne sert plus à masquer les
+      // notifications, seulement à distinguer les nouvelles : sinon, ouvrir la
+      // cloche (ce qui avance cette date) vidait la liste avant qu'on ait pu la
+      // lire. On écarte en revanche celles fermées manuellement via ✕.
+      const notificationsVisibles = newNotifications
+        .filter((notification) => !dismissedIdsRef.current.has(notification.id))
+        .map((notification) => ({
+          ...notification,
+          isUnread: notification.timestamp > cutoffDate,
+        }));
 
       // Trier par date
-      notificationsFiltered.sort((a, b) => b.timestamp - a.timestamp);
+      notificationsVisibles.sort((a, b) => b.timestamp - a.timestamp);
 
-      setNotifications(notificationsFiltered);
+      setNotifications(notificationsVisibles);
     } catch (error) {
       console.error('Erreur lors du chargement des notifications:', error);
     }
@@ -194,41 +212,32 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
-  // Marquer toutes les notifications comme lues ET vider le dropdown
+  // Marquer comme lues ET retirer de l'affichage
   const markAllAsReadAndClear = async () => {
     try {
-      // 1. Marquer en base
-      await markNotificationsAsRead();
-      
-      // 2. Vider le dropdown immédiatement
+      const idsVisibles = notifications.map((n) => n.id);
+      setDismissedIds((prev) => {
+        const suivant = new Set(prev);
+        idsVisibles.forEach((id) => suivant.add(id));
+        return suivant;
+      });
       setNotifications([]);
-      
-      console.log('✅ Toutes les notifications effacées');
+      await markNotificationsAsRead();
     } catch (error) {
       console.error('❌ Erreur lors de l\'effacement des notifications:', error);
     }
   };
 
-  // Le systeme ne suit qu'une seule date globale de derniere consultation (pas
-  // d'etat lu/non lu par notification). Retirer une notification seulement de
-  // l'affichage local ne suffit donc pas : au prochain sondage (30s), elle est
-  // recalculee depuis cette meme date jamais avancee, et reapparait. On
-  // persiste donc systematiquement cote serveur, ce qui a pour consequence que
-  // dismisser une seule notification marque en realite toutes les notifications
-  // courantes comme lues (comportement equivalent a "Tout marquer lu").
-  const markAsRead = async (notificationId) => {
+  // Fermeture manuelle d'une seule notification (bouton ✕) : purement locale.
+  // Elle est mémorisée dans `dismissedIds` pour que le sondage ne la fasse pas
+  // revenir, sans toucher aux autres notifications encore affichées.
+  const markAsRead = (notificationId) => {
+    setDismissedIds((prev) => new Set(prev).add(notificationId));
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-    if (!user?.id) return;
-    try {
-      await duellistesService.markNotificationsAsRead(user.id);
-      await refreshUser();
-    } catch (error) {
-      console.error('Erreur lors du marquage de la notification comme lue:', error);
-    }
   };
 
   const markAllAsRead = () => {
-    setNotifications([]);
+    markAllAsReadAndClear();
   };
 
   useEffect(() => {
@@ -241,7 +250,9 @@ export const NotificationProvider = ({ children }) => {
 
   const value = {
     notifications,
-    unreadCount: notifications.length,
+    // Le compteur ne porte que sur les nouveautés : la liste, elle, reste
+    // consultable même une fois tout marqué comme lu.
+    unreadCount: notifications.filter((n) => n.isUnread).length,
     markAsRead,
     markAllAsRead,
     markNotificationsAsRead,

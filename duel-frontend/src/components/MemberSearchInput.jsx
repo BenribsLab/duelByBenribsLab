@@ -2,12 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import Avatar from './Avatar';
 
-const MemberSearchInput = ({ duellistes, onSelect, currentUserId, placeholder = "Rechercher un duelliste..." }) => {
+const MemberSearchInput = ({ duellistes, onSelect, currentUserId, selectedMember = null, placeholder = "Rechercher un duelliste..." }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
+
+  // Une sélection venue de l'extérieur (ex. « Défier » depuis la liste des
+  // duellistes, qui pré-remplit via l'URL) ne passe pas par handleSelect :
+  // sans cette synchronisation, le champ resterait vide et on croirait que le
+  // clic n'a rien fait.
+  useEffect(() => {
+    if (selectedMember) {
+      setQuery(selectedMember.pseudo);
+    }
+  }, [selectedMember]);
 
   // Filtrer les duellistes selon la recherche
   const filteredDuellistes = duellistes
