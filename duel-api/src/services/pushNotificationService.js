@@ -38,7 +38,9 @@ class PushNotificationService {
       };
 
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        // firebase-admin v12+ a retiré l'espace de noms `admin.credential` :
+        // `cert` est maintenant exposé directement sur `admin`.
+        credential: admin.cert(serviceAccount),
         projectId: 'duelbybenribslab'
       });
 
