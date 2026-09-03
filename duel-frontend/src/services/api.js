@@ -98,7 +98,8 @@ export const duelsService = {
   },
   acceptProposition: async (id, duelisteId) => {
     return api.put(`/duels/${id}/accepter-proposition`, { duelisteId });
-  }
+  },
+  report: (id, message) => api.post(`/duels/${id}/signaler`, { message })
 };
 
 export const classementService = {

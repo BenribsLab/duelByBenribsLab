@@ -44,6 +44,8 @@ const Confidentialite = () => {
               <li><strong>Activité</strong> : duels proposés, acceptés ou refusés, scores saisis, historique de victoires/défaites.</li>
               <li><strong>Notifications</strong> : un identifiant technique (jeton FCM) est enregistré sur votre appareil si vous activez les notifications, pour vous prévenir d'un nouveau duel ou résultat.</li>
               <li><strong>Invitations</strong> : si vous invitez un tiers par e-mail, son adresse et le statut de l'invitation (envoyée, ouverte, inscrite) sont conservés ; l'adresse IP associée est tronquée avant stockage.</li>
+              <li><strong>Signalements</strong> : si vous signalez un message ou un comportement lié à un duel, le contenu de votre signalement est conservé et transmis à un administrateur pour examen.</li>
+              <li><strong>Consentement parental</strong> : pour un compte Junior (moins de 15 ans), l'e-mail du parent ou responsable légal est collecté et utilisé uniquement pour lui demander son autorisation ; le compte reste inactif tant qu'elle n'a pas été donnée puis validée par un administrateur.</li>
             </ul>
           </section>
 

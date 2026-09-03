@@ -119,6 +119,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/invitations', require('./routes/invitations'));
 app.use('/api/track', require('./routes/tracking'));
+app.use('/api/parental-consent', require('./routes/parentalConsent'));
 
 // Middleware de gestion d'erreurs
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars

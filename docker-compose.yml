@@ -27,6 +27,7 @@ services:
       ADMIN_PASSWORD_HASH: "${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH bcrypt requis}"
       OTP_SECRET: "${OTP_SECRET:?OTP_SECRET requis}"
       TRACKING_SECRET: "${TRACKING_SECRET:?TRACKING_SECRET requis}"
+      PARENTAL_CONSENT_SECRET: "${PARENTAL_CONSENT_SECRET:?PARENTAL_CONSENT_SECRET requis}"
       FRONTEND_URL: "${FRONTEND_URL:-https://duel.benribs.fr}"
       API_URL: "${API_URL:-https://api-duel.benribs.fr}"
       # Envoi d'e-mails via Microsoft Graph (OTP, invitations, bienvenue).
@@ -36,6 +37,9 @@ services:
       AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
       GRAPH_SENDER_EMAIL: "${GRAPH_SENDER_EMAIL:-}"
       GRAPH_SENDER_NAME: "${GRAPH_SENDER_NAME:-Duel By Benribs Lab}"
+      # Reçoit les signalements de contenu/comportement. Optionnel : sans elle,
+      # les signalements restent enregistrés en base sans notification.
+      ADMIN_NOTIFICATION_EMAIL: "${ADMIN_NOTIFICATION_EMAIL:-}"
       # Push notifications mobile (Firebase Admin SDK). Optionnel : sans ces
       # valeurs, l'API demarre normalement et desactive juste les push.
       FIREBASE_PRIVATE_KEY_ID: "${FIREBASE_PRIVATE_KEY_ID:-}"

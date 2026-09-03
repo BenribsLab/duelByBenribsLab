@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { prisma } = require('../database');
 const emailService = require('./emailService');
+const parentalConsentService = require('./parentalConsentService');
 
 const JWT_ISSUER = 'duel-api';
 const JWT_AUDIENCE = 'duel-app';
@@ -93,9 +94,20 @@ class AuthService {
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
-  async registerWithPassword(pseudo, password, email = null, categorie = 'SENIOR') {
+  /**
+   * Un compte Junior (moins de 15 ans, majorité numérique RGPD) reste bloqué
+   * tant qu'un parent puis un administrateur n'ont pas validé — voir
+   * parentalConsentService. Le statut ACTIF par défaut du schéma est donc
+   * explicitement écrasé ici pour cette catégorie.
+   */
+  async registerWithPassword(pseudo, password, email = null, categorie = 'SENIOR', parentEmail = null) {
     if (this.normalizeEmail(email)) {
       throw new AuthError('Utilisez la vérification par email pour associer une adresse au compte', 400);
+    }
+
+    const estJunior = categorie === 'JUNIOR';
+    if (estJunior && !this.normalizeEmail(parentEmail)) {
+      throw new AuthError('L\'e-mail d\'un parent ou responsable légal est requis pour un compte Junior', 400);
     }
 
     const existingUser = await prisma.dueliste.findUnique({ where: { pseudo } });
@@ -109,15 +121,31 @@ class AuthService {
         passwordHash,
         authMode: 'PASSWORD',
         emailVerified: false,
-        categorie
+        categorie,
+        statut: estJunior ? 'EN_ATTENTE_PARENTAL' : 'ACTIF'
       }
     });
+
+    if (estJunior) {
+      try {
+        await parentalConsentService.requestConsent(user.id, pseudo, this.normalizeEmail(parentEmail));
+      } catch (error) {
+        await prisma.dueliste.delete({ where: { id: user.id } }).catch(() => {});
+        throw new AuthError(error.message || 'Impossible d\'envoyer la demande au parent', 503);
+      }
+      return { user: this.toSafeUser(user), requiresParentalConsent: true };
+    }
 
     return { user: this.toSafeUser(user), token: this.generateToken(user) };
   }
 
-  async registerWithOTP(pseudo, email, categorie = 'SENIOR') {
+  async registerWithOTP(pseudo, email, categorie = 'SENIOR', parentEmail = null) {
     const normalizedEmail = this.normalizeEmail(email);
+    const estJunior = categorie === 'JUNIOR';
+    if (estJunior && !this.normalizeEmail(parentEmail)) {
+      throw new AuthError('L\'e-mail d\'un parent ou responsable légal est requis pour un compte Junior', 400);
+    }
+
     const [existingUser, existingEmail] = await Promise.all([
       prisma.dueliste.findUnique({ where: { pseudo } }),
       prisma.dueliste.findUnique({ where: { email: normalizedEmail } })
@@ -138,7 +166,8 @@ class AuthService {
         otpAttempts: 0,
         otpLastSentAt: new Date(),
         otpLockedUntil: null,
-        categorie
+        categorie,
+        statut: estJunior ? 'EN_ATTENTE_PARENTAL' : 'ACTIF'
       }
     });
 
@@ -149,7 +178,16 @@ class AuthService {
       throw new AuthError('Impossible d’envoyer le code de vérification', 503);
     }
 
-    return { user: this.toSafeUser(user), requiresOTP: true };
+    if (estJunior) {
+      try {
+        await parentalConsentService.requestConsent(user.id, pseudo, this.normalizeEmail(parentEmail));
+      } catch (error) {
+        await prisma.dueliste.delete({ where: { id: user.id } }).catch(() => {});
+        throw new AuthError(error.message || 'Impossible d\'envoyer la demande au parent', 503);
+      }
+    }
+
+    return { user: this.toSafeUser(user), requiresOTP: true, requiresParentalConsent: estJunior };
   }
 
   async loginWithPassword(pseudo, password) {
@@ -210,7 +248,12 @@ class AuthService {
     const user = await prisma.dueliste.findUnique({ where: { email: normalizedEmail } });
     const now = new Date();
 
-    if (!user || user.authMode !== 'OTP' || user.statut !== 'ACTIF') {
+    // EN_ATTENTE_PARENTAL reste autorisé ici : prouver la possession de sa
+    // propre boîte e-mail est une étape d'inscription, indépendante du
+    // consentement parental. Le compte demeure inutilisable ensuite tant que
+    // le statut ne repasse pas à ACTIF (voir getUserFromToken).
+    const statutAutorise = user && (user.statut === 'ACTIF' || user.statut === 'EN_ATTENTE_PARENTAL');
+    if (!user || user.authMode !== 'OTP' || !statutAutorise) {
       throw new AuthError('Code OTP invalide ou expiré');
     }
     if (user.otpLockedUntil && user.otpLockedUntil > now) {

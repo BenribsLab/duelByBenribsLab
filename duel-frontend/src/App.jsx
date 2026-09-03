@@ -16,6 +16,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Confidentialite from './pages/Confidentialite';
 import SuppressionCompte from './pages/SuppressionCompte';
+import ConsentementParental from './pages/ConsentementParental';
+import ConsentementParentalAdmin from './pages/ConsentementParentalAdmin';
 import './App.css'
 
 function App() {
@@ -32,9 +34,13 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/confidentialite" element={<Confidentialite />} />
           <Route path="/suppression-compte" element={<SuppressionCompte />} />
+          <Route path="/consentement-parental" element={<ConsentementParental />} />
 
           {/* Route d'administration (connexion) */}
           <Route path="/admin" element={<AdminLogin />} />
+
+          {/* Publique, autorisation portée par le jeton signé de l'e-mail — pas de connexion admin */}
+          <Route path="/admin/consentement-parental" element={<ConsentementParentalAdmin />} />
           
           {/* Routes d'administration protégées */}
           <Route path="/admin/dashboard" element={

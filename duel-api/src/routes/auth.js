@@ -41,7 +41,16 @@ router.post('/register', registerLimiter, [
     .optional()
     .isIn(['JUNIOR', 'SENIOR'])
     .withMessage('Catégorie invalide'),
-  
+
+  // Obligatoire uniquement en catégorie Junior (moins de 15 ans) : voir
+  // parentalConsentService. La cohérence exacte (présence garantie) est
+  // revérifiée côté service, ce validateur ne fait qu'un contrôle de forme.
+  body('parentEmail')
+    .if(body('categorie').equals('JUNIOR'))
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('L\'e-mail d\'un parent ou responsable légal est requis pour un compte Junior'),
+
   validation.handleValidation,
 ], authController.register);
 

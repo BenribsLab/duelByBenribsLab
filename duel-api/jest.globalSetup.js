@@ -15,6 +15,9 @@ module.exports = async () => {
     {
       cwd: root,
       stdio: 'inherit',
+      // Sous Windows, npx.cmd est un script batch : execFileSync doit passer
+      // par le shell pour l'executer (sinon EINVAL).
+      shell: process.platform === 'win32',
       env: { ...process.env, DATABASE_URL: `file:${testDbPath}` }
     }
   );

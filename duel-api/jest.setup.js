@@ -13,6 +13,7 @@ process.env.JWT_SECRET = 'test-jwt-secret-'.padEnd(48, 'x');
 process.env.ADMIN_JWT_SECRET = 'test-admin-jwt-secret-'.padEnd(48, 'y');
 process.env.OTP_SECRET = 'test-otp-secret-'.padEnd(48, 'z');
 process.env.TRACKING_SECRET = 'test-tracking-secret-'.padEnd(48, 'w');
+process.env.PARENTAL_CONSENT_SECRET = 'test-parental-consent-secret-'.padEnd(48, 'v');
 process.env.JWT_EXPIRES_IN = '1h';
 
 process.env.ADMIN_USERNAME = 'admin';
@@ -22,3 +23,4 @@ process.env.ADMIN_PASSWORD_HASH = bcrypt.hashSync(process.env.TEST_ADMIN_PASSWOR
 
 process.env.FRONTEND_URL = 'https://frontend.test';
 process.env.OTP_RESEND_SECONDS = '0';
+process.env.ADMIN_NOTIFICATION_EMAIL = 'admin@example.test';

@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Swords, Calendar, Check, X, Trophy, AlertCircle, ChevronDown, Users, Search, Mail } from 'lucide-react';
+import { Swords, Calendar, Check, X, Trophy, AlertCircle, ChevronDown, Users, Search, Mail, Flag } from 'lucide-react';
 import { duelsService, duellistesService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import ScoreModal from '../components/ScoreModal';
@@ -141,6 +141,38 @@ const Duels = () => {
     } catch (error) {
       console.error('Erreur lors du refus:', error);
       alert('Erreur lors du refus: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  // Signalement : formulaire replié sous le message, une seule saisie ouverte
+  // a la fois (identifiee par duelId).
+  const [reportingDuelId, setReportingDuelId] = useState(null);
+  const [reportMessage, setReportMessage] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
+  const handleOpenReport = (duelId) => {
+    setReportingDuelId(duelId);
+    setReportMessage('');
+  };
+
+  const handleCancelReport = () => {
+    setReportingDuelId(null);
+    setReportMessage('');
+  };
+
+  const handleSubmitReport = async (duelId) => {
+    if (!reportMessage.trim()) return;
+    setReportSubmitting(true);
+    try {
+      await duelsService.report(duelId, reportMessage.trim());
+      setReportingDuelId(null);
+      setReportMessage('');
+      alert('Signalement envoyé. Un administrateur va l\'examiner.');
+    } catch (error) {
+      console.error('Erreur lors du signalement:', error);
+      alert('Erreur lors du signalement: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -368,6 +400,45 @@ const Duels = () => {
                     {duel.notes && (
                       <div className="mt-2 text-sm text-gray-600">
                         <strong>Message :</strong> {duel.notes}
+                        {reportingDuelId !== duel.id ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReport(duel.id)}
+                            className="ml-2 inline-flex items-center text-xs text-gray-400 hover:text-red-600"
+                          >
+                            <Flag className="h-3 w-3 mr-1" />
+                            Signaler
+                          </button>
+                        ) : (
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md border border-gray-200">
+                            <textarea
+                              value={reportMessage}
+                              onChange={(e) => setReportMessage(e.target.value)}
+                              placeholder="Expliquez en quelques mots ce qui pose problème..."
+                              rows={2}
+                              maxLength={500}
+                              className="w-full text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-500"
+                            />
+                            <div className="mt-2 flex space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSubmitReport(duel.id)}
+                                disabled={reportSubmitting || !reportMessage.trim()}
+                                className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md disabled:opacity-50"
+                              >
+                                {reportSubmitting ? 'Envoi...' : 'Envoyer le signalement'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelReport}
+                                disabled={reportSubmitting}
+                                className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

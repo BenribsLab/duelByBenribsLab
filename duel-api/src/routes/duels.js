@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, param, query } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
+const { reportLimiter } = require('../middleware/securityRateLimits');
 
 const {
   getAllDuels,
@@ -12,8 +13,23 @@ const {
   refuserDuel,
   saisirScore,
   getPropositionScore,
-  accepterPropositionScore
+  accepterPropositionScore,
+  signalerDuel
 } = require('../controllers/duelsController');
+
+// Validation pour le signalement
+const validateSignalerDuel = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('L\'ID du duel doit être un entier positif'),
+
+  body('message')
+    .trim()
+    .isLength({ min: 1, max: 500 })
+    .withMessage('Le message du signalement doit contenir entre 1 et 500 caractères'),
+
+  handleValidation
+];
 
 // Validation pour la proposition de duel
 const validateProposerDuel = [
@@ -139,5 +155,7 @@ router.put('/:id/accepter-proposition',
   handleValidation,
   accepterPropositionScore
 );
+
+router.post('/:id/signaler', authenticateToken, reportLimiter, validateSignalerDuel, signalerDuel);
 
 module.exports = router;

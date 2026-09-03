@@ -168,14 +168,28 @@ class Duel_Auth {
      */
     public function verify_otp($email, $otp_code) {
         $response = $this->api_client->verify_otp($email, $otp_code);
-        
+
         if (isset($response['success']) && $response['success']) {
+            // Un compte Junior reste bloqué (statut EN_ATTENTE_PARENTAL) tant que
+            // le parent puis un administrateur n'ont pas validé, même si le code
+            // OTP est correct : l'API renvoie quand même un jeton, mais il est
+            // inerte jusqu'à activation. Ne jamais le stocker comme une vraie
+            // connexion dans ce cas, sous peine de session fantôme.
+            $statut = $response['data']['user']['statut'] ?? 'ACTIF';
+            if ($statut !== 'ACTIF') {
+                return array(
+                    'success' => true,
+                    'step' => 'parental_consent_pending',
+                    'message' => 'E-mail vérifié. Un e-mail a été envoyé au parent renseigné pour autoriser la création du compte.'
+                );
+            }
+
             // Stocker les données de connexion
             $this->store_auth_data(
                 $response['data']['token'],
                 $response['data']['user']
             );
-            
+
             return array(
                 'success' => true,
                 'message' => 'Connexion réussie'
@@ -196,10 +210,17 @@ class Duel_Auth {
      * @param string $email L'email (optionnel)
      * @return array Résultat de l'inscription
      */
-    public function register_with_password($pseudo, $password, $email = null) {
-        $response = $this->api_client->register_with_password($pseudo, $password, $email);
-        
+    public function register_with_password($pseudo, $password, $email = null, $categorie = null, $parent_email = null) {
+        $response = $this->api_client->register_with_password($pseudo, $password, $email, $categorie, $parent_email);
+
         if (isset($response['success']) && $response['success']) {
+            if (!empty($response['data']['requiresParentalConsent'])) {
+                return array(
+                    'success' => true,
+                    'step' => 'parental_consent_pending',
+                    'message' => 'Compte créé. Un e-mail a été envoyé au parent renseigné pour autoriser la création du compte.'
+                );
+            }
             return array(
                 'success' => true,
                 'message' => 'Inscription réussie ! Vous pouvez maintenant vous connecter.'
@@ -219,8 +240,8 @@ class Duel_Auth {
      * @param string $email L'email
      * @return array Résultat de l'inscription
      */
-    public function register_with_otp($pseudo, $email) {
-        $response = $this->api_client->register_with_otp($pseudo, $email);
+    public function register_with_otp($pseudo, $email, $categorie = null, $parent_email = null) {
+        $response = $this->api_client->register_with_otp($pseudo, $email, $categorie, $parent_email);
         
         if (isset($response['success']) && $response['success']) {
             if (isset($response['data']['requiresOTP']) && $response['data']['requiresOTP']) {

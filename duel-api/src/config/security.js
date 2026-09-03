@@ -1,7 +1,7 @@
 function validateSecurityConfig() {
   if (process.env.NODE_ENV !== 'production') return;
 
-  const requiredSecrets = ['JWT_SECRET', 'ADMIN_JWT_SECRET', 'OTP_SECRET', 'TRACKING_SECRET'];
+  const requiredSecrets = ['JWT_SECRET', 'ADMIN_JWT_SECRET', 'OTP_SECRET', 'TRACKING_SECRET', 'PARENTAL_CONSENT_SECRET'];
   const missing = requiredSecrets.filter((name) => {
     const value = process.env[name] || '';
     return value.length < 32 || /change|replace|votre|example/i.test(value);

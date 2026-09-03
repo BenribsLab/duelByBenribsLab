@@ -1,6 +1,7 @@
 const { prisma } = require('../database');
 const { recalculateStats } = require('../services/classementService');
 const pushNotificationService = require('../services/pushNotificationService');
+const emailService = require('../services/emailService');
 
 /**
  * Récupérer tous les duels
@@ -925,8 +926,70 @@ async function accepterPropositionScore(req, res) {
   }
 }
 
+/**
+ * Signaler un comportement ou un message inapproprié lié à un duel.
+ * Le signalant doit être l'un des deux participants du duel ; le signalé est
+ * automatiquement l'autre participant (pas de choix libre de la cible).
+ */
+async function signalerDuel(req, res) {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+    const signalantId = req.user.id;
+
+    const duel = await prisma.duel.findUnique({ where: { id: parseInt(id) } });
+
+    if (!duel) {
+      return res.status(404).json({ success: false, error: 'Duel non trouvé' });
+    }
+
+    if (![duel.provocateurId, duel.adversaireId].includes(signalantId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Vous ne pouvez signaler que les duels auxquels vous participez'
+      });
+    }
+
+    const signaleId = duel.provocateurId === signalantId ? duel.adversaireId : duel.provocateurId;
+
+    const report = await prisma.report.create({
+      data: {
+        reporterId: signalantId,
+        reportedUserId: signaleId,
+        duelId: duel.id,
+        message
+      },
+      include: {
+        reporter: { select: { pseudo: true } },
+        reportedUser: { select: { pseudo: true } }
+      }
+    });
+
+    // Best-effort : l'echec de l'e-mail ne doit pas faire echouer le signalement,
+    // deja enregistre en base a ce stade.
+    emailService.sendReportNotificationEmail({
+      reporterPseudo: report.reporter.pseudo,
+      reportedPseudo: report.reportedUser.pseudo,
+      duelId: duel.id,
+      message
+    }).catch((error) => console.error('Erreur notification signalement:', error.message));
+
+    res.status(201).json({
+      success: true,
+      message: 'Signalement envoyé. Un administrateur va l\'examiner.'
+    });
+  } catch (error) {
+    console.error('Erreur signalerDuel:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'envoi du signalement'
+    });
+  }
+}
+
 module.exports = {
   getAllDuels,
+  signalerDuel,
   getDuelById,
   proposerDuel,
   accepterDuel,

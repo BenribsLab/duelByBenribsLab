@@ -565,6 +565,124 @@ class EmailService {
   }
 
   /**
+   * Notifier l'administrateur d'un signalement (contenu ou comportement).
+   * Best-effort : l'échec de cet envoi ne doit jamais faire échouer le
+   * signalement lui-même (déjà enregistré en base à ce stade).
+   */
+  async sendReportNotificationEmail({ reporterPseudo, reportedPseudo, duelId, message }) {
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+    if (!adminEmail) {
+      console.warn('ADMIN_NOTIFICATION_EMAIL non configuré : signalement enregistré, mais aucun e-mail envoyé.');
+      return false;
+    }
+
+    try {
+      const graphClient = await this.getGraphClient();
+
+      const contexteDuel = duelId ? `Duel #${escapeHtml(String(duelId))}` : 'Hors contexte de duel';
+
+      const mail = {
+        message: {
+          subject: `🚩 Signalement : ${reporterPseudo} → ${reportedPseudo}`,
+          body: {
+            contentType: 'HTML',
+            content: `
+              <p><strong>${escapeHtml(reporterPseudo)}</strong> a signalé <strong>${escapeHtml(reportedPseudo)}</strong>.</p>
+              <p>${contexteDuel}</p>
+              <p>Message du signalement :</p>
+              <blockquote style="border-left:3px solid #ccc;padding-left:10px;color:#333;">
+                ${escapeHtml(message)}
+              </blockquote>
+            `
+          },
+          toRecipients: [{ emailAddress: { address: adminEmail } }],
+          from: { emailAddress: { address: this.senderEmail, name: this.senderName } }
+        },
+        saveToSentItems: false
+      };
+
+      await graphClient.api(`/users/${this.senderEmail}/sendMail`).post(mail);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification de signalement:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Demander au parent d'un compte Junior l'autorisation d'inscription.
+   * Contrairement au lien de suivi, le clic n'exécute rien : il amène sur une
+   * page de confirmation, pour ne pas risquer qu'un scanner anti-hameçonnage
+   * de la messagerie déclenche la décision en pré-chargeant le lien.
+   */
+  async sendParentalConsentRequestEmail(parentEmail, childPseudo, decisionUrl) {
+    try {
+      const graphClient = await this.getGraphClient();
+
+      const message = {
+        message: {
+          subject: `🧒 Autorisation demandée pour ${escapeHtml(childPseudo)} - Duel By Benribs Lab`,
+          body: {
+            contentType: 'HTML',
+            content: `
+              <p>Bonjour,</p>
+              <p><strong>${escapeHtml(childPseudo)}</strong> souhaite créer un compte sur Duel By Benribs Lab
+              (application de suivi de duels d'escrime) et a indiqué votre adresse comme responsable légal.</p>
+              <p>Le compte reste inactif tant que vous n'avez pas répondu.</p>
+              <p><a href="${escapeHtml(decisionUrl)}" style="background:#7c3aed;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Examiner la demande</a></p>
+              <p style="color:#666;font-size:12px;">Ce lien expire dans 30 jours. Si vous n'êtes pas à l'origine de cette
+              demande, vous pouvez l'ignorer ou la refuser sans conséquence.</p>
+            `
+          },
+          toRecipients: [{ emailAddress: { address: parentEmail } }],
+          from: { emailAddress: { address: this.senderEmail, name: this.senderName } }
+        },
+        saveToSentItems: false
+      };
+
+      await graphClient.api(`/users/${this.senderEmail}/sendMail`).post(message);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la demande de consentement parental:', error.message);
+      throw new Error('Impossible d\'envoyer l\'e-mail au parent');
+    }
+  }
+
+  /**
+   * Notifier l'administrateur qu'un parent a donné son accord et qu'une
+   * validation finale est attendue. Best-effort : ne doit jamais faire
+   * échouer la décision du parent, déjà enregistrée à ce stade.
+   */
+  async sendParentalConsentAdminReviewEmail(adminEmail, childPseudo, parentEmail, decisionUrl) {
+    try {
+      const graphClient = await this.getGraphClient();
+
+      const message = {
+        message: {
+          subject: `✅ Consentement parental reçu pour ${escapeHtml(childPseudo)}`,
+          body: {
+            contentType: 'HTML',
+            content: `
+              <p>Le parent (${escapeHtml(parentEmail)}) de <strong>${escapeHtml(childPseudo)}</strong> a donné son accord.</p>
+              <p>Validation finale requise avant activation du compte.</p>
+              <p><a href="${escapeHtml(decisionUrl)}" style="background:#7c3aed;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Examiner et valider</a></p>
+            `
+          },
+          toRecipients: [{ emailAddress: { address: adminEmail } }],
+          from: { emailAddress: { address: this.senderEmail, name: this.senderName } }
+        },
+        saveToSentItems: false
+      };
+
+      await graphClient.api(`/users/${this.senderEmail}/sendMail`).post(message);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification admin (consentement parental):', error.message);
+      return false;
+    }
+  }
+
+  /**
    * Tester la configuration email
    */
   async testEmailConfiguration() {

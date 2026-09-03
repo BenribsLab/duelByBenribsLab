@@ -16,5 +16,6 @@ module.exports = {
   loginLimiter: limiter(15 * 60 * 1000, 10),
   otpVerifyLimiter: limiter(15 * 60 * 1000, 10),
   adminLoginLimiter: limiter(15 * 60 * 1000, 5),
-  invitationLimiter: limiter(60 * 60 * 1000, 10)
+  invitationLimiter: limiter(60 * 60 * 1000, 10),
+  reportLimiter: limiter(60 * 60 * 1000, 10)
 };

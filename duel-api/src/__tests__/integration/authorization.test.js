@@ -1,4 +1,10 @@
 const request = require('supertest');
+
+jest.mock('../../services/emailService', () => ({
+  sendReportNotificationEmail: jest.fn().mockResolvedValue(true)
+}));
+
+const emailService = require('../../services/emailService');
 const app = require('../../app');
 const { resetDatabase, createUser, bearer, adminToken, prisma } = require('../helpers/testUtils');
 
@@ -224,6 +230,75 @@ describe('contrôles d\'accès (BOLA / IDOR)', () => {
 
       expect(response.status).toBe(403);
       expect((await prisma.duel.findUnique({ where: { id: duel.id } })).etat).not.toBe('VALIDE');
+    });
+  });
+
+  describe('signalement', () => {
+    test('un participant peut signaler l\'autre participant du duel', async () => {
+      const duel = await duelEntreAliceEtBob();
+
+      const response = await request(app)
+        .post(`/api/duels/${duel.id}/signaler`)
+        .set(bearer(alice.token))
+        .send({ message: 'Propos déplacés dans le message du duel.' });
+
+      expect(response.status).toBe(201);
+      const report = await prisma.report.findFirst({ where: { duelId: duel.id } });
+      expect(report.reporterId).toBe(alice.id);
+      expect(report.reportedUserId).toBe(bob.id);
+      expect(emailService.sendReportNotificationEmail).toHaveBeenCalledTimes(1);
+    });
+
+    test('un tiers ne peut pas signaler un duel auquel il ne participe pas', async () => {
+      const duel = await duelEntreAliceEtBob();
+
+      const response = await request(app)
+        .post(`/api/duels/${duel.id}/signaler`)
+        .set(bearer(mallory.token))
+        .send({ message: 'Je signale ce duel.' });
+
+      expect(response.status).toBe(403);
+      expect(await prisma.report.findFirst({ where: { duelId: duel.id } })).toBeNull();
+    });
+
+    test('le signalé est toujours l\'autre participant, sans choix libre de la cible', async () => {
+      const duel = await duelEntreAliceEtBob('A_JOUER', { arbitreId: mallory.id });
+
+      const response = await request(app)
+        .post(`/api/duels/${duel.id}/signaler`)
+        .set(bearer(bob.token))
+        .send({ message: 'Signalement côté adversaire.', reportedUserId: mallory.id });
+
+      expect(response.status).toBe(201);
+      const report = await prisma.report.findFirst({ where: { duelId: duel.id } });
+      expect(report.reportedUserId).toBe(alice.id); // pas mallory, malgré la tentative
+    });
+
+    test('un message vide ou trop long est refusé', async () => {
+      const duel = await duelEntreAliceEtBob();
+
+      const vide = await request(app)
+        .post(`/api/duels/${duel.id}/signaler`)
+        .set(bearer(alice.token))
+        .send({ message: '' });
+      expect(vide.status).toBe(400);
+
+      const tropLong = await request(app)
+        .post(`/api/duels/${duel.id}/signaler`)
+        .set(bearer(alice.token))
+        .send({ message: 'x'.repeat(501) });
+      expect(tropLong.status).toBe(400);
+
+      expect(await prisma.report.count()).toBe(0);
+    });
+
+    test('signaler exige une authentification', async () => {
+      const duel = await duelEntreAliceEtBob();
+      const response = await request(app)
+        .post(`/api/duels/${duel.id}/signaler`)
+        .send({ message: 'Sans jeton.' });
+
+      expect(response.status).toBe(401);
     });
   });
 

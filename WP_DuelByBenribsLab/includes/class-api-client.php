@@ -134,35 +134,51 @@ class Duel_API_Client {
      * @param string $email L'email (optionnel)
      * @return array Réponse de l'API
      */
-    public function register_with_password($pseudo, $password, $email = null) {
+    public function register_with_password($pseudo, $password, $email = null, $categorie = null, $parent_email = null) {
         $data = array(
             'pseudo' => $pseudo,
             'password' => $password,
             'authMode' => 'PASSWORD',
             'hasEmailAccess' => false
         );
-        
+
         if ($email) {
             $data['email'] = $email;
         }
-        
+        if ($categorie) {
+            $data['categorie'] = $categorie;
+        }
+        if ($parent_email) {
+            $data['parentEmail'] = $parent_email;
+        }
+
         return $this->make_request('auth/register', $data, 'POST');
     }
-    
+
     /**
      * Inscription avec OTP
-     * 
+     *
      * @param string $pseudo Le pseudo
      * @param string $email L'email
+     * @param string $categorie JUNIOR ou SENIOR
+     * @param string $parent_email E-mail du parent, requis si JUNIOR
      * @return array Réponse de l'API
      */
-    public function register_with_otp($pseudo, $email) {
-        return $this->make_request('auth/register', array(
+    public function register_with_otp($pseudo, $email, $categorie = null, $parent_email = null) {
+        $data = array(
             'pseudo' => $pseudo,
             'email' => $email,
             'authMode' => 'OTP',
             'hasEmailAccess' => true
-        ), 'POST');
+        );
+        if ($categorie) {
+            $data['categorie'] = $categorie;
+        }
+        if ($parent_email) {
+            $data['parentEmail'] = $parent_email;
+        }
+
+        return $this->make_request('auth/register', $data, 'POST');
     }
     
     /**
@@ -251,6 +267,14 @@ class Duel_API_Client {
     public function refuse_duel($duel_id, $data, $token) {
         $endpoint = 'duels/' . intval($duel_id) . '/refuser';
         return $this->make_request($endpoint, $data, 'PUT', $token);
+    }
+
+    /**
+     * Signaler un message ou un comportement lié à un duel
+     */
+    public function report_duel($duel_id, $message, $token) {
+        $endpoint = 'duels/' . intval($duel_id) . '/signaler';
+        return $this->make_request($endpoint, array('message' => $message), 'POST', $token);
     }
     
     /**

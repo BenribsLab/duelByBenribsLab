@@ -38,6 +38,9 @@ model Dueliste {
   validations     ValidationScore[]
   emailInvitations EmailInvitation[] @relation("EmailInvitations")
   registeredFromInvitations EmailInvitation[] @relation("RegisteredFromInvitation")
+  signalementsEnvoyes Report[]          @relation("SignalementsEnvoyes")
+  signalementsRecus   Report[]          @relation("SignalementsRecus")
+  parentalConsent     ParentalConsent?
 
   @@map("duellistes")
 }
@@ -65,6 +68,7 @@ model Duel {
   adversaire           Dueliste          @relation("DuelsRecus", fields: [adversaireId], references: [id], onDelete: Cascade)
   provocateur          Dueliste          @relation("DuelsProvoques", fields: [provocateurId], references: [id], onDelete: Cascade)
   validations          ValidationScore[]
+  signalements         Report[]
 
   @@map("duels")
 }
@@ -112,4 +116,41 @@ model EmailInvitation {
   registeredUser   Dueliste? @relation("RegisteredFromInvitation", fields: [registeredUserId], references: [id], onDelete: SetNull)
 
   @@map("email_invitations")
+}
+
+// Signalement d'un comportement ou d'un message inapproprié lié a un duel.
+// Volontairement minimal : pas de statut de traitement en base, le signalement
+// declenche un e-mail immediat a l'administrateur (voir emailService).
+model Report {
+  id             Int      @id @default(autoincrement())
+  reporterId     Int
+  reportedUserId Int
+  duelId         Int?
+  message        String
+  createdAt      DateTime @default(now())
+
+  reporter     Dueliste @relation("SignalementsEnvoyes", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser Dueliste @relation("SignalementsRecus", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  duel         Duel?    @relation(fields: [duelId], references: [id], onDelete: SetNull)
+
+  @@map("reports")
+}
+
+// Consentement parental pour les comptes Junior (moins de 15 ans, majorite
+// numerique RGPD en France). Le compte reste bloque (statut EN_ATTENTE_PARENTAL)
+// tant que le parent puis un administrateur n'ont pas valide.
+model ParentalConsent {
+  id              Int       @id @default(autoincrement())
+  duelisteId      Int       @unique
+  parentEmail     String
+  status          String    @default("PENDING_PARENT") // PENDING_PARENT, PENDING_ADMIN, APPROVED, REJECTED
+  parentDecidedAt DateTime?
+  adminDecidedAt  DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  dueliste Dueliste @relation(fields: [duelisteId], references: [id], onDelete: Cascade)
+
+  @@map("parental_consents")
 }

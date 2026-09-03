@@ -8,22 +8,30 @@ function errorResponse(res, error, fallback, defaultStatus = 400) {
 class AuthController {
   async register(req, res) {
     try {
-      const { pseudo, email, password, authMode, hasEmailAccess, categorie } = req.body;
+      const { pseudo, email, password, authMode, hasEmailAccess, categorie, parentEmail } = req.body;
       const finalAuthMode = authMode || (hasEmailAccess && email ? 'OTP' : 'PASSWORD');
 
       if (finalAuthMode === 'OTP') {
         if (!email) return res.status(400).json({ success: false, error: 'Email requis' });
-        const result = await authService.registerWithOTP(pseudo, email, categorie);
+        const result = await authService.registerWithOTP(pseudo, email, categorie, parentEmail);
         return res.status(201).json({
           success: true,
-          message: 'Compte créé. Vérifiez votre email pour le code OTP.',
+          message: result.requiresParentalConsent
+            ? 'Compte créé. Vérifiez votre email pour le code OTP ; un e-mail a aussi été envoyé au parent renseigné.'
+            : 'Compte créé. Vérifiez votre email pour le code OTP.',
           data: result
         });
       }
 
       if (!password) return res.status(400).json({ success: false, error: 'Mot de passe requis' });
-      const result = await authService.registerWithPassword(pseudo, password, email, categorie);
-      return res.status(201).json({ success: true, message: 'Compte créé avec succès', data: result });
+      const result = await authService.registerWithPassword(pseudo, password, email, categorie, parentEmail);
+      return res.status(201).json({
+        success: true,
+        message: result.requiresParentalConsent
+          ? 'Compte créé. Un e-mail a été envoyé au parent renseigné pour autorisation.'
+          : 'Compte créé avec succès',
+        data: result
+      });
     } catch (error) {
       console.error('Erreur lors de l\'inscription:', error.message);
       return errorResponse(res, error, 'Erreur lors de la création du compte');

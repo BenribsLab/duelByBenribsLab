@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, Mail, Lock, User, Wifi, WifiOff, AlertCircle } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Wifi, WifiOff, AlertCircle, MailCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import config from '../config';
@@ -14,15 +14,30 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     authMode: '',
-    moinsDe15ans: false
+    moinsDe15ans: false,
+    parentEmail: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [otpStep, setOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  
+  // Compte Junior créé mais bloqué jusqu'à l'accord du parent puis de l'administrateur
+  const [awaitingParentalConsent, setAwaitingParentalConsent] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Un compte peut avoir reussi son inscription/verification OTP sans etre
+  // utilisable pour autant (Junior en attente de consentement parental) : on
+  // ne connecte et ne redirige jamais sans avoir verifie le statut reel.
+  const completerConnexion = (data) => {
+    if (data.requiresParentalConsent || data.user?.statut === 'EN_ATTENTE_PARENTAL') {
+      setAwaitingParentalConsent(true);
+      return;
+    }
+    login(data.user, data.token);
+    navigate('/dashboard');
+  };
 
   const handleEmailAccessChoice = (hasAccess) => {
     setHasEmailAccess(hasAccess);
@@ -63,12 +78,22 @@ const Register = () => {
         }
       }
 
+      if (formData.moinsDe15ans && !formData.parentEmail.trim()) {
+        setError('L\'e-mail d\'un parent ou responsable légal est requis pour un compte Junior');
+        setIsLoading(false);
+        return;
+      }
+
       const registrationData = {
         pseudo: formData.pseudo,
         authMode: formData.authMode,
         hasEmailAccess,
         categorie: formData.moinsDe15ans ? 'JUNIOR' : 'SENIOR'
       };
+
+      if (formData.moinsDe15ans) {
+        registrationData.parentEmail = formData.parentEmail.trim();
+      }
 
       if (formData.authMode === 'OTP') {
         registrationData.email = formData.email;
@@ -80,14 +105,13 @@ const Register = () => {
       }
 
       const response = await axios.post(`${config.API_BASE_URL}/auth/register`, registrationData);
-      
+
       if (response.data.success) {
         if (response.data.data && response.data.data.requiresOTP) {
           setOtpStep(true);
         } else {
-          // Inscription réussie avec mot de passe
-          login(response.data.data.user, response.data.data.token);
-          navigate('/dashboard');
+          // Inscription réussie avec mot de passe (ou compte Junior en attente)
+          completerConnexion(response.data.data);
         }
       } else {
         setError(response.data.error || 'Erreur lors de l\'inscription');
@@ -111,8 +135,7 @@ const Register = () => {
       });
 
       if (response.data.success) {
-        login(response.data.data.user, response.data.data.token);
-        navigate('/dashboard');
+        completerConnexion(response.data.data);
       } else {
         setError(response.data.error || 'Code OTP invalide');
       }
@@ -122,6 +145,33 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
+  // Compte Junior créé mais bloqué jusqu'à l'accord du parent puis de l'administrateur
+  if (awaitingParentalConsent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-purple-100">
+            <MailCheck className="h-6 w-6 text-purple-600" />
+          </div>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            Autorisation parentale en attente
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Votre compte a bien été créé, mais reste inactif : un e-mail a été envoyé au parent ou
+            responsable légal renseigné. Le compte s'activera dès qu'il aura donné son accord et
+            qu'un administrateur l'aura validé.
+          </p>
+          <Link
+            to="/"
+            className="inline-block text-purple-600 hover:text-purple-500 text-sm font-medium"
+          >
+            ← Retour à l'accueil
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Étape 3: Vérification OTP
   if (otpStep) {
@@ -437,12 +487,38 @@ const Register = () => {
                 Moins de 15 ans (catégorie Junior)
               </label>
             </div>
+
+            {formData.moinsDe15ans && (
+              <div>
+                <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700">
+                  E-mail d'un parent ou responsable légal
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="parentEmail"
+                    name="parentEmail"
+                    type="email"
+                    required
+                    className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                    placeholder="parent@example.com"
+                    value={formData.parentEmail}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-600">
+                  Un e-mail lui sera envoyé pour autoriser la création du compte. Le compte reste inactif tant qu'il n'a pas répondu.
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
             <button
               type="submit"
-              disabled={isLoading || !formData.pseudo || (formData.authMode === 'OTP' && !formData.email) || (formData.authMode === 'PASSWORD' && (!formData.password || !formData.confirmPassword || formData.password !== formData.confirmPassword))}
+              disabled={isLoading || !formData.pseudo || (formData.moinsDe15ans && !formData.parentEmail.trim()) || (formData.authMode === 'OTP' && !formData.email) || (formData.authMode === 'PASSWORD' && (!formData.password || !formData.confirmPassword || formData.password !== formData.confirmPassword))}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">

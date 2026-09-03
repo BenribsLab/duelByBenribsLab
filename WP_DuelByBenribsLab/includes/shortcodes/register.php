@@ -63,7 +63,11 @@ class Duel_Register_Shortcode {
                 </div>
             <?php endif; ?>
             
-            <?php if (isset($form_data['step']) && $form_data['step'] === 'otp'): ?>
+            <?php if (isset($form_data['step']) && $form_data['step'] === 'parental_consent_pending'): ?>
+                <div class="duel-info">
+                    <?php echo esc_html($form_data['message']); ?>
+                </div>
+            <?php elseif (isset($form_data['step']) && $form_data['step'] === 'otp'): ?>
                 <?php echo self::render_otp_verification_form($form_data['email'], $atts); ?>
             <?php elseif (isset($form_data['step']) && $form_data['step'] === 'password_form'): ?>
                 <?php echo self::render_password_registration_form($form_data['pseudo'], $atts); ?>
@@ -134,13 +138,17 @@ class Duel_Register_Shortcode {
             case 'register_with_otp':
                 $pseudo = sanitize_text_field($_POST['pseudo']);
                 $email = sanitize_email($_POST['email']);
-                
+                list($categorie, $parent_email, $categorie_error) = self::extraire_categorie_junior();
+
                 if (empty($pseudo) || empty($email)) {
                     return array('error' => 'Pseudo et email requis');
                 }
-                
-                $result = $auth->register_with_otp($pseudo, $email);
-                
+                if ($categorie_error) {
+                    return array('error' => $categorie_error);
+                }
+
+                $result = $auth->register_with_otp($pseudo, $email, $categorie, $parent_email);
+
                 if ($result['success'] && isset($result['step']) && $result['step'] === 'otp') {
                     return array(
                         'step' => 'otp',
@@ -148,59 +156,95 @@ class Duel_Register_Shortcode {
                         'message' => $result['message']
                     );
                 }
-                
+
                 return $result;
-                
+
             case 'register_with_password':
                 $pseudo = sanitize_text_field($_POST['pseudo']);
                 $password = $_POST['password']; // Ne pas sanitizer le mot de passe
                 $confirm_password = $_POST['confirm_password'];
-                
+                list($categorie, $parent_email, $categorie_error) = self::extraire_categorie_junior();
+
                 if (empty($pseudo) || empty($password) || empty($confirm_password)) {
                     return array('error' => 'Tous les champs sont requis');
                 }
-                
+
                 if ($password !== $confirm_password) {
                     return array('error' => 'Les mots de passe ne correspondent pas');
                 }
-                
+
                 if (strlen($password) < 10 || strlen($password) > 72) {
                     return array('error' => 'Le mot de passe doit contenir entre 10 et 72 octets');
                 }
-                
-                $result = $auth->register_with_password($pseudo, $password);
-                
+                if ($categorie_error) {
+                    return array('error' => $categorie_error);
+                }
+
+                $result = $auth->register_with_password($pseudo, $password, null, $categorie, $parent_email);
+
+                // Un compte Junior reste inactif : pas de redirection "inscription
+                // réussie", on affiche plutôt le message d'attente sans quitter la page.
+                if (isset($result['step']) && $result['step'] === 'parental_consent_pending') {
+                    return $result;
+                }
+
                 // Si l'inscription est réussie, rediriger
                 if (isset($result['success']) && $result['success']) {
                     wp_safe_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
                     exit;
                 }
-                
+
                 return $result;
-                
+
             case 'verify_register_otp':
                 $email = sanitize_email($_POST['email']);
                 $otp_code = sanitize_text_field($_POST['otp_code']);
-                
+
                 if (empty($email) || empty($otp_code)) {
                     return array('error' => 'Email et code OTP requis');
                 }
-                
+
                 $result = $auth->verify_otp($email, $otp_code);
-                
+
+                // Compte Junior en attente d'autorisation parentale : ne pas
+                // rediriger vers le message "connexion réussie", rien n'a été stocké.
+                if (isset($result['step']) && $result['step'] === 'parental_consent_pending') {
+                    return $result;
+                }
+
                 // Si la connexion est réussie, on doit rediriger pour éviter les problèmes de nonce
                 if (isset($result['success']) && $result['success']) {
                     // Nettoyer les données POST pour éviter la resoumission
                     wp_safe_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
                     exit;
                 }
-                
+
                 return $result;
         }
         
         return array();
     }
-    
+
+    /**
+     * Lit et valide la case « moins de 15 ans » + l'e-mail parent associé,
+     * communs aux deux formulaires d'inscription finale (OTP et mot de passe).
+     *
+     * @return array [categorie|null, parent_email|null, erreur|null]
+     */
+    private static function extraire_categorie_junior() {
+        $est_junior = !empty($_POST['moins_de_15_ans']);
+        if (!$est_junior) {
+            return array('SENIOR', null, null);
+        }
+
+        $parent_email = isset($_POST['parent_email']) ? sanitize_email($_POST['parent_email']) : '';
+        if (empty($parent_email) || !is_email($parent_email)) {
+            return array(null, null, 'L\'e-mail d\'un parent ou responsable légal est requis pour un compte Junior');
+        }
+
+        return array('JUNIOR', $parent_email, null);
+    }
+
     /**
      * Formulaire de question sur l'accès email (étape 1)
      */
@@ -291,12 +335,14 @@ class Duel_Register_Shortcode {
                 
                 <div class="duel-form-group">
                     <label for="email">Votre email</label>
-                    <input type="email" id="email" name="email" required 
+                    <input type="email" id="email" name="email" required
                            placeholder="votre.email@exemple.com"
                            class="duel-form-control">
                     <small class="duel-form-help">Un code de vérification sera envoyé à cette adresse</small>
                 </div>
-                
+
+                <?php echo self::render_champ_categorie_junior('otp'); ?>
+
                 <div class="duel-form-actions">
                     <button type="button" class="duel-btn duel-btn-secondary duel-back-button">
                         ← Retour
@@ -306,6 +352,38 @@ class Duel_Register_Shortcode {
                     </button>
                 </div>
             </form>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Bloc « moins de 15 ans » + e-mail parent (affiché seulement si coché),
+     * partagé par les deux formulaires d'inscription finale.
+     *
+     * @param string $suffix Suffixe d'identifiant unique par formulaire (deux
+     *                       formulaires peuvent coexister dans le DOM selon l'étape).
+     */
+    private static function render_champ_categorie_junior($suffix) {
+        $checkbox_id = 'moins_de_15_ans_' . $suffix;
+        $parent_group_id = 'parent-email-group-' . $suffix;
+        ob_start();
+        ?>
+        <div class="duel-form-group">
+            <label>
+                <input type="checkbox" id="<?php echo esc_attr($checkbox_id); ?>" name="moins_de_15_ans" value="1"
+                       onchange="document.getElementById('<?php echo esc_js($parent_group_id); ?>').style.display = this.checked ? 'block' : 'none';">
+                Moins de 15 ans (catégorie Junior)
+            </label>
+        </div>
+        <div class="duel-form-group" id="<?php echo esc_attr($parent_group_id); ?>" style="display:none;">
+            <label for="parent_email_<?php echo esc_attr($suffix); ?>">E-mail d'un parent ou responsable légal</label>
+            <input type="email" id="parent_email_<?php echo esc_attr($suffix); ?>" name="parent_email"
+                   placeholder="parent@exemple.com" class="duel-form-control">
+            <small class="duel-form-help">
+                Un e-mail lui sera envoyé pour autoriser la création du compte. Le compte reste
+                inactif tant qu'il n'a pas répondu, et qu'un administrateur n'a pas validé.
+            </small>
         </div>
         <?php
         return ob_get_clean();
@@ -343,10 +421,12 @@ class Duel_Register_Shortcode {
                 
                 <div class="duel-form-group">
                     <label for="confirm_password">Confirmer le mot de passe</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required 
+                    <input type="password" id="confirm_password" name="confirm_password" required
                            minlength="10" maxlength="72" class="duel-form-control">
                 </div>
-                
+
+                <?php echo self::render_champ_categorie_junior('password'); ?>
+
                 <div class="duel-form-actions">
                     <button type="button" class="duel-btn duel-btn-secondary duel-back-button">
                         ← Retour

@@ -448,6 +448,20 @@ function render_duel_card($duel, $type, $user_id = null, $api_client = null, $to
         <?php if (!empty($duel['notes'])): ?>
             <div class="duel-notes">
                 <strong>Message :</strong> <?php echo esc_html($duel['notes']); ?>
+                <?php if ($type === 'invitation'): ?>
+                    <details class="duel-report-details">
+                        <summary class="duel-report-toggle">🚩 Signaler</summary>
+                        <form method="post" action="<?php echo esc_url(remove_query_arg('duel_action')); ?>" class="duel-report-form">
+                            <input type="hidden" name="duel_action" value="report">
+                            <input type="hidden" name="duel_id" value="<?php echo intval($duel['id']); ?>">
+                            <?php wp_nonce_field('duel_report_action', 'duel_report_nonce'); ?>
+                            <textarea name="report_message" rows="2" maxlength="500" required
+                                placeholder="Expliquez en quelques mots ce qui pose problème..."
+                                class="duel-form-control"></textarea>
+                            <button type="submit" class="duel-btn duel-btn-danger duel-btn-small">Envoyer le signalement</button>
+                        </form>
+                    </details>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         
@@ -639,6 +653,10 @@ function handle_duel_action($api_client, $token, $user) {
         if (!isset($_POST['duel_score_nonce']) || !wp_verify_nonce($_POST['duel_score_nonce'], 'duel_score_action')) {
             return '<div class="duel-error">Erreur de sécurité. Veuillez recharger la page.</div>';
         }
+    } elseif ($action === 'report') {
+        if (!isset($_POST['duel_report_nonce']) || !wp_verify_nonce($_POST['duel_report_nonce'], 'duel_report_action')) {
+            return '<div class="duel-error">Erreur de sécurité. Veuillez recharger la page.</div>';
+        }
     }
     
     switch ($action) {
@@ -687,6 +705,19 @@ function handle_duel_action($api_client, $token, $user) {
             $response = $api_client->validate_score($duel_id, $score_data, $token);
             break;
             
+        case 'report':
+            if (empty($_POST['duel_id']) || !is_numeric($_POST['duel_id'])) {
+                return '<div class="duel-error">ID de duel invalide.</div>';
+            }
+            $message = isset($_POST['report_message']) ? trim(sanitize_textarea_field($_POST['report_message'])) : '';
+            if ($message === '' || mb_strlen($message) > 500) {
+                return '<div class="duel-error">Le message du signalement doit contenir entre 1 et 500 caractères.</div>';
+            }
+
+            $duel_id = intval($_POST['duel_id']);
+            $response = $api_client->report_duel($duel_id, $message, $token);
+            break;
+
         case 'accept_proposition':
             // Accepter une proposition de score existante
             if (empty($_POST['duel_id']) || !is_numeric($_POST['duel_id'])) {
@@ -731,6 +762,9 @@ function handle_duel_action($api_client, $token, $user) {
         if ($action === 'accept_proposition' || $action === 'score') {
             // Pour les scores, rediriger vers duels récents si le duel est terminé
             $current_url = add_query_arg('tab', 'duels-recents', $current_url);
+        } elseif ($action === 'report') {
+            // Le signalement se fait depuis une invitation reçue : y rester
+            $current_url = add_query_arg('tab', 'invitations-recues', $current_url);
         } else {
             // Pour les autres actions, rester sur mes défis
             $current_url = add_query_arg('tab', 'mes-defis', $current_url);
