@@ -63,9 +63,7 @@ function duel_classement_shortcode($atts) {
                     <div class="duel-avatar-cell">Avatar</div>
                     <div class="duel-pseudo-cell">Pseudo</div>
                     <div class="duel-stats-cell">V/D</div>
-                    <div class="duel-matches-cell">Matchs</div>
-                    <div class="duel-touches-cell">Indice</div>
-                    <div class="duel-winrate-cell">Taux</div>
+                    <div class="duel-points-cell">Points</div>
                 </div>
 
                 <?php foreach ($classement as $index => $dueliste): ?>
@@ -119,21 +117,8 @@ function duel_classement_shortcode($atts) {
                             <span class="duel-defaites"><?php echo intval(isset($dueliste['nbDefaites']) ? $dueliste['nbDefaites'] : 0); ?></span>
                         </div>
                         
-                        <div class="duel-matches-cell">
-                            <span class="duel-matches"><?php echo intval(isset($dueliste['nbMatchsTotal']) ? $dueliste['nbMatchsTotal'] : 0); ?></span>
-                        </div>
-                        
-                        <div class="duel-touches-cell">
-                            <span class="duel-touches"><?php echo intval(isset($dueliste['indiceTouches']) ? $dueliste['indiceTouches'] : 0); ?></span>
-                        </div>
-                        
-                        <div class="duel-winrate-cell">
-                            <?php 
-                            $tauxVictoire = isset($dueliste['tauxVictoire']) ? floatval($dueliste['tauxVictoire']) : 0;
-                            // L'API renvoie déjà le taux en pourcentage, pas besoin de multiplier par 100
-                            $tauxFormate = round($tauxVictoire, 1);
-                            ?>
-                            <span class="duel-winrate"><?php echo $tauxFormate; ?>%</span>
+                        <div class="duel-points-cell">
+                            <span class="duel-points"><?php echo intval(isset($dueliste['totalPoints']) ? $dueliste['totalPoints'] : 0); ?></span>
                         </div>
                     </div>
                 <?php endforeach; ?>

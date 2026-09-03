@@ -50,7 +50,7 @@ class PushNotificationService {
 
   async setupListeners() {
     await PushNotifications.addListener("registration", (token) => {
-      console.log("Token FCM recu:", token.value);
+      console.log("Token FCM recu");
       this.token = token.value;
       this.sendTokenToServer(token.value);
     });
@@ -80,7 +80,7 @@ class PushNotificationService {
 
   async sendTokenToServer(token) {
     try {
-      console.log("TOKEN - Envoi au serveur:", token);
+      console.log("TOKEN - Envoi au serveur");
       const userData = await secureStorage.getUserData();
       const authToken = await secureStorage.getAuthToken();
 

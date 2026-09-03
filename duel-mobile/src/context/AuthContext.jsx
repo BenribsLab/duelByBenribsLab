@@ -146,6 +146,11 @@ export const AuthProvider = ({ children }) => {
   // Fonction de déconnexion
   const logout = async () => {
     try {
+      if (token) {
+        await axios.post(`${config.API_BASE_URL}/auth/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => {});
+      }
       setUser(null);
       setToken(null);
       

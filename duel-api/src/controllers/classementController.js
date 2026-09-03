@@ -1,5 +1,50 @@
 const { calculateClassement, calculateClassementJunior, getDuelisteStats, recalculateAllStats } = require('../services/classementService');
 const { prisma } = require('../database');
+const { PUBLIC_DUELLISTE_SELECT } = require('../utils/safeData');
+
+// Vue anonyme du classement : uniquement ce qu'un tableau de classement affiche.
+// On retire notamment l'identifiant (qui permettait d'énumérer les membres un à
+// un) et les dates d'inscription, qui ne relèvent pas du classement.
+const CLASSEMENT_PUBLIC_LIMIT_DEFAUT = 20;
+const CLASSEMENT_PUBLIC_LIMIT_MAX = 100;
+
+function versEntreePublique(entree) {
+  return {
+    rang: entree.rang,
+    pseudo: entree.pseudo,
+    avatarUrl: entree.avatarUrl,
+    categorie: entree.categorie,
+    nbVictoires: entree.nbVictoires,
+    nbDefaites: entree.nbDefaites,
+    totalPoints: entree.totalPoints
+  };
+}
+
+/**
+ * Applique le filtre minMatchs, la limite, puis — pour un appelant non
+ * authentifié — la projection publique et un plafond de résultats.
+ */
+function prepareClassement(entrees, { limit, minMatchs }, utilisateur) {
+  let resultat = entrees;
+
+  const seuil = parseInt(minMatchs, 10);
+  if (seuil > 0) {
+    resultat = resultat
+      .filter((dueliste) => dueliste.nbMatchsTotal >= seuil)
+      .map((dueliste, index) => ({ ...dueliste, rang: index + 1 }));
+  }
+
+  const limiteDemandee = parseInt(limit, 10);
+  const limiteValide = Number.isInteger(limiteDemandee) && limiteDemandee > 0 ? limiteDemandee : null;
+
+  if (utilisateur) {
+    return limiteValide ? resultat.slice(0, limiteValide) : resultat;
+  }
+
+  // Sans jeton, la liste est toujours bornée : elle ne doit pas servir d'annuaire.
+  const limitePublique = Math.min(limiteValide || CLASSEMENT_PUBLIC_LIMIT_DEFAUT, CLASSEMENT_PUBLIC_LIMIT_MAX);
+  return resultat.slice(0, limitePublique).map(versEntreePublique);
+}
 
 /**
  * Récupérer le classement général
@@ -7,24 +52,9 @@ const { prisma } = require('../database');
 async function getClassement(req, res) {
   try {
     const { limit, minMatchs = 0 } = req.query;
-    
-    let classement = await calculateClassement();
-    
-    // Filtrer par nombre minimum de matchs si spécifié
-    if (parseInt(minMatchs) > 0) {
-      classement = classement.filter(dueliste => dueliste.nbMatchsTotal >= parseInt(minMatchs));
-      
-      // Recalculer les rangs après filtrage
-      classement.forEach((dueliste, index) => {
-        dueliste.rang = index + 1;
-      });
-    }
-    
-    // Limiter le nombre de résultats si spécifié
-    if (limit && parseInt(limit) > 0) {
-      classement = classement.slice(0, parseInt(limit));
-    }
-    
+
+    const classement = prepareClassement(await calculateClassement(), { limit, minMatchs }, req.user);
+
     res.json({
       success: true,
       data: classement,
@@ -36,7 +66,7 @@ async function getClassement(req, res) {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('Erreur getClassement:', error);
     res.status(500).json({
@@ -121,7 +151,21 @@ async function getStatsGlobales(req, res) {
         } 
       })
     ]);
-    
+
+    const totaux = {
+      duellistes: totalDuellistes,
+      duellistesActifs,
+      duels: totalDuels,
+      duelsValides,
+      duelsEnCours
+    };
+
+    // Sans jeton, on s'arrête aux compteurs agrégés : les records et l'activité
+    // récente sont nominatifs et n'ont pas à être exposés publiquement.
+    if (!req.user) {
+      return res.json({ success: true, data: { totaux } });
+    }
+
     // Dueliste le plus actif
     const duelistePlusActif = await prisma.dueliste.findFirst({
       where: { statut: 'ACTIF' },
@@ -134,7 +178,8 @@ async function getStatsGlobales(req, res) {
       where: { 
         statut: 'ACTIF',
         nbMatchsTotal: { gte: 5 }
-      }
+      },
+      select: PUBLIC_DUELLISTE_SELECT
     });
     
     const meilleurTaux = duellistes.reduce((meilleur, dueliste) => {
@@ -158,13 +203,7 @@ async function getStatsGlobales(req, res) {
     res.json({
       success: true,
       data: {
-        totaux: {
-          duellistes: totalDuellistes,
-          duellistesActifs,
-          duels: totalDuels,
-          duelsValides,
-          duelsEnCours
-        },
+        totaux,
         records: {
           duelistePlusActif,
           meilleurTauxVictoire: meilleurTaux ? {
@@ -191,24 +230,13 @@ async function getStatsGlobales(req, res) {
 async function getClassementJunior(req, res) {
   try {
     const { limit, minMatchs = 0 } = req.query;
-    
-    let classementJunior = await calculateClassementJunior();
-    
-    // Filtrer par nombre minimum de matchs si spécifié
-    if (parseInt(minMatchs) > 0) {
-      classementJunior = classementJunior.filter(dueliste => dueliste.nbMatchsTotal >= parseInt(minMatchs));
-      
-      // Recalculer les rangs après filtrage
-      classementJunior.forEach((dueliste, index) => {
-        dueliste.rang = index + 1;
-      });
-    }
-    
-    // Limiter le nombre de résultats si spécifié
-    if (limit && parseInt(limit) > 0) {
-      classementJunior = classementJunior.slice(0, parseInt(limit));
-    }
-    
+
+    const classementJunior = prepareClassement(
+      await calculateClassementJunior(),
+      { limit, minMatchs },
+      req.user
+    );
+
     res.json({
       success: true,
       data: classementJunior,

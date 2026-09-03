@@ -1,21 +1,41 @@
 const { Client } = require('@microsoft/microsoft-graph-client');
 const { ConfidentialClientApplication } = require('@azure/msal-node');
+const { createTrackingToken } = require('../utils/trackingToken');
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 /**
  * Service d'envoi d'emails via Microsoft Graph
  */
 class EmailService {
   constructor() {
-    this.clientApp = new ConfidentialClientApplication({
-      auth: {
-        clientId: process.env.AZURE_CLIENT_ID,
-        clientSecret: process.env.AZURE_CLIENT_SECRET,
-        authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}`
-      }
-    });
-    
+    this.clientApp = null;
     this.senderEmail = process.env.GRAPH_SENDER_EMAIL;
     this.senderName = process.env.GRAPH_SENDER_NAME || 'Duel By Benribs Lab';
+  }
+
+  /**
+   * Client MSAL créé à la demande : une configuration Graph absente ne doit pas
+   * empêcher l'API de démarrer, seulement faire échouer l'envoi d'emails.
+   */
+  getClientApp() {
+    if (!this.clientApp) {
+      this.clientApp = new ConfidentialClientApplication({
+        auth: {
+          clientId: process.env.AZURE_CLIENT_ID,
+          clientSecret: process.env.AZURE_CLIENT_SECRET,
+          authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}`
+        }
+      });
+    }
+    return this.clientApp;
   }
 
   /**
@@ -27,7 +47,7 @@ class EmailService {
         scopes: ['https://graph.microsoft.com/.default'],
       };
 
-      const response = await this.clientApp.acquireTokenByClientCredential(clientCredentialRequest);
+      const response = await this.getClientApp().acquireTokenByClientCredential(clientCredentialRequest);
       return response.accessToken;
     } catch (error) {
       console.error('Erreur lors de l\'obtention du token d\'accès:', error);
@@ -94,7 +114,8 @@ class EmailService {
    * Générer le contenu HTML de l'email OTP
    */
   generateOTPEmailHTML(otpCode, recipientName) {
-    const displayName = recipientName ? `Bonjour ${recipientName}` : 'Bonjour';
+    const displayName = recipientName ? `Bonjour ${escapeHtml(recipientName)}` : 'Bonjour';
+    const safeOTP = escapeHtml(otpCode);
     
     return `
       <!DOCTYPE html>
@@ -179,7 +200,7 @@ class EmailService {
           
           <div class="otp-code">
             <p style="margin: 0 0 10px 0; color: #374151; font-weight: 500;">Votre code de vérification :</p>
-            <div class="code">${otpCode}</div>
+            <div class="code">${safeOTP}</div>
           </div>
           
           <div class="warning">
@@ -251,7 +272,7 @@ class EmailService {
    * Générer le contenu HTML de l'email de bienvenue
    */
   generateWelcomeEmailHTML(recipientName, isOTPMode) {
-    const displayName = recipientName || 'Escrimeur';
+    const displayName = escapeHtml(recipientName || 'Escrimeur');
     const authMethod = isOTPMode ? 'codes par email' : 'mot de passe';
     
     return `
@@ -344,7 +365,7 @@ class EmailService {
   /**
    * Envoyer un email d'invitation de duel avec tracking
    */
-  async sendInvitationEmail(recipientEmail, inviterName, inviterPseudo, recipientName = null, invitationId = null) {
+  async sendInvitationEmail(recipientEmail, inviterName, inviterPseudo, recipientName = null, invitationId = null, expiresAt = null) {
     try {
       const graphClient = await this.getGraphClient();
       
@@ -353,7 +374,7 @@ class EmailService {
           subject: `⚔️ ${inviterPseudo} vous invite à rejoindre Duel By Benribs Lab !`,
           body: {
             contentType: 'HTML',
-            content: this.generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId)
+            content: this.generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId, expiresAt)
           },
           toRecipients: [
             {
@@ -386,16 +407,21 @@ class EmailService {
   /**
    * Générer le contenu HTML de l'email d'invitation avec tracking
    */
-  generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId = null) {
-    const displayName = recipientName ? `Bonjour ${recipientName}` : 'Bonjour';
+  generateInvitationEmailHTML(inviterName, inviterPseudo, recipientName, invitationId = null, expiresAt = null) {
+    const rawInviterPseudo = inviterPseudo;
+    const displayName = recipientName ? `Bonjour ${escapeHtml(recipientName)}` : 'Bonjour';
     const appUrl = process.env.FRONTEND_URL || 'https://duel.benribs.fr';
-    const apiUrl = process.env.API_URL || 'http://api-duel.benribs.fr';
+    const apiUrl = process.env.API_URL || 'https://api-duel.benribs.fr';
+    const trackingToken = invitationId
+      ? createTrackingToken(invitationId, expiresAt || Date.now() + 30 * 24 * 60 * 60 * 1000)
+      : null;
     
     // URLs avec tracking si on a un ID d'invitation
-    const trackingPixelUrl = invitationId ? `${apiUrl}/api/track/email-open/${invitationId}` : null;
-    const trackedSignupUrl = invitationId ? 
-      `${apiUrl}/api/track/invitation-click/${invitationId}?redirect=${encodeURIComponent(`${appUrl}/register?invitedBy=${encodeURIComponent(inviterPseudo)}&invitationId=${invitationId}`)}` :
-      `${appUrl}/register?invitedBy=${encodeURIComponent(inviterPseudo)}`;
+    const trackingPixelUrl = trackingToken ? `${apiUrl}/api/track/email-open/${trackingToken}` : null;
+    const trackedSignupUrl = trackingToken
+      ? `${apiUrl}/api/track/invitation-click/${trackingToken}`
+      : `${appUrl}/register?invitedBy=${encodeURIComponent(rawInviterPseudo)}`;
+    inviterPseudo = escapeHtml(inviterPseudo);
     
     return `
       <!DOCTYPE html>

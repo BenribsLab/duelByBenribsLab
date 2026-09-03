@@ -25,7 +25,7 @@ const authenticateAdmin = (req, res, next) => {
   } catch (error) {
     return res.status(401).json({
       success: false,
-      error: error.message || 'Authentification admin échoué'
+      error: 'Token admin invalide ou expiré'
     });
   }
 };

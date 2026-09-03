@@ -60,7 +60,6 @@ class PushNotificationService {
   async sendNotification(token, notification, data = {}) {
     if (!this.initialized) {
       console.log('📱 Push notification simulée (Firebase non configuré):', {
-        token: token?.substring(0, 20) + '...',
         title: notification.title,
         body: notification.body
       });
@@ -90,11 +89,11 @@ class PushNotificationService {
       return response;
 
     } catch (error) {
-      console.error('❌ Erreur envoi notification:', error);
+      console.error('Erreur envoi notification:', error.code || error.message);
       
       // Si le token est invalide, on pourrait le supprimer de la base
       if (error.code === 'messaging/registration-token-not-registered') {
-        console.warn(`Token invalide: ${token}`);
+        console.warn('Token de notification invalide');
         // TODO: Supprimer le token de la base de données
       }
       
@@ -153,7 +152,7 @@ class PushNotificationService {
       return response;
 
     } catch (error) {
-      console.error('❌ Erreur envoi multicast:', error);
+      console.error('Erreur envoi multicast:', error.code || error.message);
       throw error;
     }
   }

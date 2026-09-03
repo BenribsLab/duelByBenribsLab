@@ -276,13 +276,16 @@ router.post('/:id/resend', authenticateAdmin, async (req, res) => {
       });
     }
 
+    const renewedExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     // Envoyer l'email
     await emailService.sendInvitationEmail(
       invitation.email,
       invitation.inviter.pseudo,
       invitation.inviter.pseudo,
       invitation.recipientName,
-      invitation.id
+      invitation.id,
+      renewedExpiry
     );
 
     // Mettre à jour l'invitation
@@ -290,7 +293,8 @@ router.post('/:id/resend', authenticateAdmin, async (req, res) => {
       where: { id: parseInt(id) },
       data: {
         status: 'SENT',
-        reminderSentAt: new Date()
+        reminderSentAt: new Date(),
+        expiresAt: renewedExpiry
       }
     });
 

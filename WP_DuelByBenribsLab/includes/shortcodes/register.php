@@ -106,7 +106,7 @@ class Duel_Register_Shortcode {
         switch ($_POST['duel_action']) {
             case 'back_to_start':
                 // Redirection vers la page actuelle pour retour au début
-                wp_redirect($_SERVER['REQUEST_URI']);
+                wp_safe_redirect($_SERVER['REQUEST_URI']);
                 exit;
                 
             case 'email_access_yes':
@@ -164,15 +164,15 @@ class Duel_Register_Shortcode {
                     return array('error' => 'Les mots de passe ne correspondent pas');
                 }
                 
-                if (strlen($password) < 6) {
-                    return array('error' => 'Le mot de passe doit contenir au moins 6 caractères');
+                if (strlen($password) < 10 || strlen($password) > 72) {
+                    return array('error' => 'Le mot de passe doit contenir entre 10 et 72 octets');
                 }
                 
                 $result = $auth->register_with_password($pseudo, $password);
                 
                 // Si l'inscription est réussie, rediriger
                 if (isset($result['success']) && $result['success']) {
-                    wp_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
+                    wp_safe_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
                     exit;
                 }
                 
@@ -191,7 +191,7 @@ class Duel_Register_Shortcode {
                 // Si la connexion est réussie, on doit rediriger pour éviter les problèmes de nonce
                 if (isset($result['success']) && $result['success']) {
                     // Nettoyer les données POST pour éviter la resoumission
-                    wp_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
+                    wp_safe_redirect(add_query_arg('registered', '1', $_SERVER['REQUEST_URI']));
                     exit;
                 }
                 
@@ -337,14 +337,14 @@ class Duel_Register_Shortcode {
                 <div class="duel-form-group">
                     <label for="password">Mot de passe</label>
                     <input type="password" id="password" name="password" required 
-                           minlength="6" class="duel-form-control">
-                    <small class="duel-form-help">Au moins 6 caractères</small>
+                           minlength="10" maxlength="72" class="duel-form-control">
+                    <small class="duel-form-help">Entre 10 et 72 caractères</small>
                 </div>
                 
                 <div class="duel-form-group">
                     <label for="confirm_password">Confirmer le mot de passe</label>
                     <input type="password" id="confirm_password" name="confirm_password" required 
-                           minlength="6" class="duel-form-control">
+                           minlength="10" maxlength="72" class="duel-form-control">
                 </div>
                 
                 <div class="duel-form-actions">

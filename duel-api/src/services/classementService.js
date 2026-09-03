@@ -1,4 +1,5 @@
 const { prisma } = require('../database');
+const { PUBLIC_DUELLISTE_SELECT } = require('../utils/safeData');
 
 /**
  * Calculer le classement général ou par catégorie
@@ -15,7 +16,8 @@ async function calculateClassement(categorie = null) {
     // Récupérer les duellistes avec leurs statistiques
     const duellistes = await prisma.dueliste.findMany({
       where: whereClause,
-      include: {
+      select: {
+        ...PUBLIC_DUELLISTE_SELECT,
         _count: {
           select: {
             duelsProvoques: {
@@ -188,7 +190,8 @@ async function recalculateAllStats() {
 async function getDuelisteStats(duelisteId) {
   try {
     const dueliste = await prisma.dueliste.findUnique({
-      where: { id: duelisteId }
+      where: { id: duelisteId },
+      select: PUBLIC_DUELLISTE_SELECT
     });
     
     if (!dueliste) {

@@ -7,7 +7,8 @@ const pushNotificationService = require('../services/pushNotificationService');
  */
 async function getAllDuels(req, res) {
   try {
-    const { etat, duelisteId, page = 1, limit = 20 } = req.query;
+    const { etat, page = 1, limit = 20 } = req.query;
+    const duelisteId = req.user.id;
     
     const where = {};
     
@@ -17,12 +18,11 @@ async function getAllDuels(req, res) {
     }
     
     // Filtrer par dueliste si spécifié
-    if (duelisteId) {
-      where.OR = [
-        { provocateurId: parseInt(duelisteId) },
-        { adversaireId: parseInt(duelisteId) }
-      ];
-    }
+    where.OR = [
+      { provocateurId: duelisteId },
+      { adversaireId: duelisteId },
+      { arbitreId: duelisteId }
+    ];
     
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
@@ -88,6 +88,11 @@ async function getDuelById(req, res) {
       });
     }
     
+    const actorId = req.user.id;
+    if (![duel.provocateurId, duel.adversaireId, duel.arbitreId].filter(Boolean).includes(actorId)) {
+      return res.status(403).json({ success: false, error: 'Accès refusé à ce duel' });
+    }
+
     res.json({
       success: true,
       data: duel
@@ -106,7 +111,8 @@ async function getDuelById(req, res) {
  */
 async function proposerDuel(req, res) {
   try {
-    const { provocateurId, adversaireId, arbitreId, dateProgrammee, notes } = req.body;
+    const { adversaireId, arbitreId, dateProgrammee, notes } = req.body;
+    const provocateurId = req.user.id;
     
     // Vérifications de base
     if (provocateurId === adversaireId) {
@@ -170,8 +176,11 @@ async function proposerDuel(req, res) {
     };
     
     if (arbitreId) {
+      if ([provocateurId, adversaireId].includes(arbitreId)) {
+        return res.status(400).json({ success: false, error: 'L\'arbitre doit être un tiers' });
+      }
       const arbitre = await prisma.dueliste.findUnique({ where: { id: arbitreId } });
-      if (!arbitre) {
+      if (!arbitre || arbitre.statut !== 'ACTIF') {
         return res.status(404).json({
           success: false,
           error: 'Arbitre non trouvé'
@@ -232,7 +241,8 @@ async function proposerDuel(req, res) {
 async function accepterDuel(req, res) {
   try {
     const { id } = req.params;
-    const { adversaireId, dateProgrammee } = req.body;
+    const { dateProgrammee } = req.body;
+    const adversaireId = req.user.id;
     
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },
@@ -320,7 +330,8 @@ async function accepterDuel(req, res) {
 async function refuserDuel(req, res) {
   try {
     const { id } = req.params;
-    const { adversaireId, raison } = req.body;
+    const { raison } = req.body;
+    const adversaireId = req.user.id;
     
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) }
@@ -379,7 +390,8 @@ async function refuserDuel(req, res) {
 async function saisirScore(req, res) {
   try {
     const { id } = req.params;
-    const { duelisteId, scoreProvocateur, scoreAdversaire } = req.body;
+    const { scoreProvocateur, scoreAdversaire } = req.body;
+    const duelisteId = req.user.id;
     
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },
@@ -724,7 +736,7 @@ async function saisirScore(req, res) {
 async function getPropositionScore(req, res) {
   try {
     const { id } = req.params;
-    const { duelisteId } = req.query;
+    const duelisteId = req.user.id;
     
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },
@@ -754,8 +766,8 @@ async function getPropositionScore(req, res) {
     }
     
     // Vérifier que la personne a le droit de voir
-    const peutVoir = duel.provocateurId === parseInt(duelisteId) || 
-                     duel.adversaireId === parseInt(duelisteId);
+    const peutVoir = duel.provocateurId === duelisteId || 
+                     duel.adversaireId === duelisteId;
     
     if (!peutVoir) {
       return res.status(403).json({
@@ -766,7 +778,10 @@ async function getPropositionScore(req, res) {
     
     // Trouver qui a proposé
     const validation = duel.validations[0];
-    const aPropose = validation.duelisteId === parseInt(duelisteId);
+    if (!validation) {
+      return res.status(409).json({ success: false, error: 'Proposition de score incohérente' });
+    }
+    const aPropose = validation.duelisteId === duelisteId;
     
     return res.json({
       success: true,
@@ -797,7 +812,7 @@ async function getPropositionScore(req, res) {
 async function accepterPropositionScore(req, res) {
   try {
     const { id } = req.params;
-    const { duelisteId } = req.body;
+    const duelisteId = req.user.id;
     
     const duel = await prisma.duel.findUnique({
       where: { id: parseInt(id) },

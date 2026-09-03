@@ -17,14 +17,10 @@ const {
 
 // Validation pour la proposition de duel
 const validateProposerDuel = [
-  body('provocateurId')
-    .isInt({ min: 1 })
-    .withMessage('L\'ID du provocateur doit être un entier positif'),
-  
   body('adversaireId')
     .isInt({ min: 1 })
     .withMessage('L\'ID de l\'adversaire doit être un entier positif'),
-  
+
   body('arbitreId')
     .optional()
     .isInt({ min: 1 })
@@ -49,10 +45,6 @@ const validateAccepterDuel = [
   param('id')
     .isInt({ min: 1 })
     .withMessage('L\'ID du duel doit être un entier positif'),
-  
-  body('adversaireId')
-    .isInt({ min: 1 })
-    .withMessage('L\'ID de l\'adversaire doit être un entier positif'),
   
   body('dateProgrammee')
     .optional()
@@ -86,10 +78,6 @@ const validateSaisirScore = [
   param('id')
     .isInt({ min: 1 })
     .withMessage('L\'ID du duel doit être un entier positif'),
-  
-  body('duelisteId')
-    .isInt({ min: 1 })
-    .withMessage('L\'ID du dueliste doit être un entier positif'),
   
   body('scoreProvocateur')
     .isInt({ min: 0, max: 50 })
@@ -127,11 +115,6 @@ const validateQuery = [
     .isIn(['PROPOSE', 'ACCEPTE', 'REFUSE', 'A_JOUER', 'EN_ATTENTE_VALIDATION', 'VALIDE', 'ANNULE'])
     .withMessage('L\'état doit être valide'),
   
-  query('duelisteId')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('L\'ID du dueliste doit être un entier positif'),
-  
   handleValidation
 ];
 
@@ -147,14 +130,12 @@ router.put('/:id/score', authenticateToken, validateSaisirScore, saisirScore);
 router.get('/:id/proposition', 
   authenticateToken,
   param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'),
-  query('duelisteId').isInt({ min: 1 }).withMessage('L\'ID du duelliste doit être un entier positif'),
   handleValidation, 
   getPropositionScore
 );
 router.put('/:id/accepter-proposition',
   authenticateToken,
   param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'),
-  body('duelisteId').isInt({ min: 1 }).withMessage('L\'ID du duelliste doit être un entier positif'),
   handleValidation,
   accepterPropositionScore
 );

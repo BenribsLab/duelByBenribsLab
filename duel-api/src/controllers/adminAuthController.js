@@ -27,7 +27,7 @@ class AdminAuthController {
       console.error('Erreur de connexion admin:', error);
       res.status(401).json({
         success: false,
-        error: error.message || 'Erreur lors de la connexion administrateur'
+        error: 'Identifiants administrateur invalides'
       });
     }
   }

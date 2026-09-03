@@ -35,7 +35,7 @@ const updatePushToken = async (req, res) => {
       }
     });
 
-    console.log(`📱 Token FCM mis à jour pour ${user.pseudo}: ${pushToken?.substring(0, 20)}...`);
+    console.log(`Token FCM mis à jour pour l'utilisateur ${user.id}`);
 
     res.json({
       success: true,

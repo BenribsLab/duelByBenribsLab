@@ -4,318 +4,262 @@ const crypto = require('crypto');
 const { prisma } = require('../database');
 const emailService = require('./emailService');
 
+const JWT_ISSUER = 'duel-api';
+const JWT_AUDIENCE = 'duel-app';
+const DUMMY_PASSWORD_HASH = '$2a$12$X3gYvZ6HQ0d3W48qYZ6H4OqJfCe3ZBqU2rjM.0vQ4jO6hYg4fE5vK';
+
+class AuthError extends Error {
+  constructor(message, status = 401, code = 'AUTH_ERROR') {
+    super(message);
+    this.name = 'AuthError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 class AuthService {
-  // Normaliser un email (trim + lowercase)
   normalizeEmail(email) {
-    if (!email) return null;
-    return email.trim().toLowerCase();
+    return email ? email.trim().toLowerCase() : null;
   }
 
-  // Générer un token JWT
-  generateToken(userId, pseudo) {
+  jwtSecret() {
+    if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET non configuré');
+    return process.env.JWT_SECRET;
+  }
+
+  otpSecret() {
+    return process.env.OTP_SECRET || this.jwtSecret();
+  }
+
+  toSafeUser(user) {
+    return {
+      id: user.id,
+      pseudo: user.pseudo,
+      email: user.email,
+      authMode: user.authMode,
+      emailVerified: user.emailVerified,
+      avatarUrl: user.avatarUrl,
+      categorie: user.categorie,
+      statut: user.statut
+    };
+  }
+
+  generateToken(user) {
     return jwt.sign(
-      { userId, pseudo },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { userId: user.id, pseudo: user.pseudo, tokenVersion: user.tokenVersion || 0 },
+      this.jwtSecret(),
+      {
+        algorithm: 'HS256',
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+      }
     );
   }
 
-  // Vérifier un token JWT
   verifyToken(token) {
     try {
-      return jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-      throw new Error('Token invalide');
+      return jwt.verify(token, this.jwtSecret(), {
+        algorithms: ['HS256'],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE
+      });
+    } catch {
+      throw new AuthError('Token invalide ou expiré');
     }
   }
 
-  // Hasher un mot de passe
+  hashOTP(otpCode) {
+    return crypto.createHmac('sha256', this.otpSecret()).update(String(otpCode)).digest('hex');
+  }
+
+  isValidOTP(candidate, storedHash) {
+    if (!storedHash) return false;
+    const candidateHash = Buffer.from(this.hashOTP(candidate), 'hex');
+    const expectedHash = Buffer.from(storedHash, 'hex');
+    return candidateHash.length === expectedHash.length && crypto.timingSafeEqual(candidateHash, expectedHash);
+  }
+
   async hashPassword(password) {
     return bcrypt.hash(password, 12);
   }
 
-  // Vérifier un mot de passe
-  async verifyPassword(password, hash) {
-    return bcrypt.compare(password, hash);
-  }
-
-  // Générer un code OTP
   generateOTP() {
-    const length = parseInt(process.env.OTP_LENGTH) || 6;
-    return crypto.randomInt(100000, 999999).toString().padStart(length, '0');
+    return crypto.randomInt(0, 1000000).toString().padStart(6, '0');
   }
 
-  // Créer un utilisateur avec mot de passe
+  otpExpiry() {
+    const minutes = parseInt(process.env.OTP_EXPIRY_MINUTES, 10) || 10;
+    return new Date(Date.now() + minutes * 60 * 1000);
+  }
+
   async registerWithPassword(pseudo, password, email = null, categorie = 'SENIOR') {
-    // Normaliser l'email
-    const normalizedEmail = this.normalizeEmail(email);
-    
-    // Vérifier si le pseudo existe déjà
-    const existingUser = await prisma.dueliste.findUnique({
-      where: { pseudo }
-    });
-
-    if (existingUser) {
-      throw new Error('Ce pseudo est déjà utilisé');
+    if (this.normalizeEmail(email)) {
+      throw new AuthError('Utilisez la vérification par email pour associer une adresse au compte', 400);
     }
 
-    // Vérifier si l'email existe déjà (si fourni)
-    if (normalizedEmail) {
-      const existingEmail = await prisma.dueliste.findUnique({
-        where: { email: normalizedEmail }
-      });
+    const existingUser = await prisma.dueliste.findUnique({ where: { pseudo } });
+    if (existingUser) throw new AuthError('Ce pseudo est déjà utilisé', 409);
 
-      if (existingEmail) {
-        throw new Error('Cet email est déjà utilisé');
-      }
-    }
-
-    // Hasher le mot de passe
     const passwordHash = await this.hashPassword(password);
-
-    // Créer l'utilisateur
     const user = await prisma.dueliste.create({
       data: {
         pseudo,
-        email: normalizedEmail,
+        email: null,
         passwordHash,
         authMode: 'PASSWORD',
-        emailVerified: normalizedEmail ? false : true, // Si pas d'email, on considère comme "vérifié"
+        emailVerified: false,
         categorie
       }
     });
 
-    // Générer le token
-    const token = this.generateToken(user.id, user.pseudo);
-
-    // Envoyer un email de bienvenue si l'utilisateur a fourni un email
-    if (normalizedEmail) {
-      try {
-        await emailService.sendWelcomeEmail(normalizedEmail, pseudo, false);
-        console.log(`Email de bienvenue envoyé à ${normalizedEmail} pour ${pseudo}`);
-      } catch (emailError) {
-        console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', emailError);
-        // On continue même si l'email échoue
-      }
-    }
-
-    return {
-      user: {
-        id: user.id,
-        pseudo: user.pseudo,
-        email: user.email,
-        authMode: user.authMode,
-        emailVerified: user.emailVerified
-      },
-      token
-    };
+    return { user: this.toSafeUser(user), token: this.generateToken(user) };
   }
 
-  // Créer un utilisateur avec OTP
   async registerWithOTP(pseudo, email, categorie = 'SENIOR') {
-    // Normaliser l'email
     const normalizedEmail = this.normalizeEmail(email);
-    
-    // Vérifier si le pseudo existe déjà
-    const existingUser = await prisma.dueliste.findUnique({
-      where: { pseudo }
-    });
+    const [existingUser, existingEmail] = await Promise.all([
+      prisma.dueliste.findUnique({ where: { pseudo } }),
+      prisma.dueliste.findUnique({ where: { email: normalizedEmail } })
+    ]);
 
-    if (existingUser) {
-      throw new Error('Ce pseudo est déjà utilisé');
-    }
+    if (existingUser) throw new AuthError('Ce pseudo est déjà utilisé', 409);
+    if (existingEmail) throw new AuthError('Cet email est déjà utilisé', 409);
 
-    // Vérifier si l'email existe déjà
-    const existingEmail = await prisma.dueliste.findUnique({
-      where: { email: normalizedEmail }
-    });
-
-    if (existingEmail) {
-      throw new Error('Cet email est déjà utilisé');
-    }
-
-    // Générer un OTP
     const otpCode = this.generateOTP();
-    const otpExpiry = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000);
-
-    // Créer l'utilisateur
     const user = await prisma.dueliste.create({
       data: {
         pseudo,
         email: normalizedEmail,
         authMode: 'OTP',
         emailVerified: false,
-        otpCode,
-        otpExpiry,
+        otpCode: this.hashOTP(otpCode),
+        otpExpiry: this.otpExpiry(),
+        otpAttempts: 0,
+        otpLastSentAt: new Date(),
+        otpLockedUntil: null,
         categorie
       }
     });
 
-    // Envoyer l'OTP par email
     try {
       await emailService.sendOTPEmail(normalizedEmail, otpCode, pseudo);
-      console.log(`OTP envoyé à ${normalizedEmail} pour l'utilisateur ${pseudo}`);
-    } catch (emailError) {
-      console.error('Erreur lors de l\'envoi de l\'email OTP:', emailError);
-      // On continue même si l'email échoue, l'utilisateur peut toujours utiliser l'OTP affiché en console
+    } catch {
+      await prisma.dueliste.delete({ where: { id: user.id } }).catch(() => {});
+      throw new AuthError('Impossible d’envoyer le code de vérification', 503);
     }
 
-    return {
-      user: {
-        id: user.id,
-        pseudo: user.pseudo,
-        email: user.email,
-        authMode: user.authMode
-      },
-      otpCode // Pour debug en développement uniquement
-    };
+    return { user: this.toSafeUser(user), requiresOTP: true };
   }
 
-  // Connexion avec mot de passe
   async loginWithPassword(pseudo, password) {
-    const user = await prisma.dueliste.findUnique({
-      where: { pseudo }
-    });
+    const user = await prisma.dueliste.findUnique({ where: { pseudo } });
+    const hash = user && user.authMode === 'PASSWORD' && user.passwordHash
+      ? user.passwordHash
+      : DUMMY_PASSWORD_HASH;
+    const passwordIsValid = await bcrypt.compare(password, hash);
 
-    if (!user || user.authMode !== 'PASSWORD') {
-      throw new Error('Utilisateur non trouvé ou méthode d\'authentification incorrecte');
+    if (!user || user.authMode !== 'PASSWORD' || !passwordIsValid || user.statut !== 'ACTIF') {
+      throw new AuthError('Identifiants invalides');
     }
 
-    if (!user.passwordHash) {
-      throw new Error('Aucun mot de passe configuré pour cet utilisateur');
-    }
-
-    const isValidPassword = await this.verifyPassword(password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new Error('Mot de passe incorrect');
-    }
-
-    const token = this.generateToken(user.id, user.pseudo);
-
-    return {
-      user: {
-        id: user.id,
-        pseudo: user.pseudo,
-        email: user.email,
-        authMode: user.authMode,
-        emailVerified: user.emailVerified
-      },
-      token
-    };
+    return { user: this.toSafeUser(user), token: this.generateToken(user) };
   }
 
-  // Demander un OTP pour connexion
   async requestOTP(email) {
     const normalizedEmail = this.normalizeEmail(email);
-    
-    console.log(`Recherche utilisateur avec email: "${email}" -> normalisé: "${normalizedEmail}"`);
-    
-    const user = await prisma.dueliste.findUnique({
-      where: { email: normalizedEmail }
-    });
+    const user = await prisma.dueliste.findUnique({ where: { email: normalizedEmail } });
 
-    console.log(`Utilisateur trouvé:`, user ? `ID: ${user.id}, pseudo: ${user.pseudo}, authMode: ${user.authMode}` : 'AUCUN');
-
-    if (!user || user.authMode !== 'OTP') {
-      throw new Error('Utilisateur non trouvé ou méthode d\'authentification incorrecte');
+    if (!user || user.authMode !== 'OTP' || user.statut !== 'ACTIF') {
+      await new Promise((resolve) => setTimeout(resolve, 75));
+      return { requiresOTP: true };
     }
 
-    // Générer un nouveau OTP
-    const otpCode = this.generateOTP();
-    const otpExpiry = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000);
+    const cooldownMs = (parseInt(process.env.OTP_RESEND_SECONDS, 10) || 60) * 1000;
+    if (user.otpLastSentAt && Date.now() - user.otpLastSentAt.getTime() < cooldownMs) {
+      return { requiresOTP: true };
+    }
 
-    // Mettre à jour l'utilisateur
+    const otpCode = this.generateOTP();
     await prisma.dueliste.update({
       where: { id: user.id },
       data: {
-        otpCode,
-        otpExpiry
+        otpCode: this.hashOTP(otpCode),
+        otpExpiry: this.otpExpiry(),
+        otpAttempts: 0,
+        otpLastSentAt: new Date(),
+        otpLockedUntil: null
       }
     });
 
-    // Envoyer l'OTP par email
     try {
       await emailService.sendOTPEmail(normalizedEmail, otpCode, user.pseudo);
-      console.log(`Nouveau OTP envoyé à ${normalizedEmail} pour l'utilisateur ${user.pseudo}`);
-    } catch (emailError) {
-      console.error('Erreur lors de l\'envoi de l\'email OTP:', emailError);
-      // On continue même si l'email échoue
+    } catch {
+      await prisma.dueliste.update({
+        where: { id: user.id },
+        data: { otpCode: null, otpExpiry: null }
+      });
+      throw new AuthError('Impossible d’envoyer le code de vérification', 503);
     }
 
-    return {
-      user: {
-        id: user.id,
-        pseudo: user.pseudo,
-        email: user.email
-      },
-      otpCode // Pour debug en développement uniquement
-    };
+    return { requiresOTP: true };
   }
 
-  // Vérifier un OTP et connecter
   async verifyOTP(email, otpCode) {
     const normalizedEmail = this.normalizeEmail(email);
-    
-    const user = await prisma.dueliste.findUnique({
-      where: { email: normalizedEmail }
-    });
+    const user = await prisma.dueliste.findUnique({ where: { email: normalizedEmail } });
+    const now = new Date();
 
-    if (!user || user.authMode !== 'OTP') {
-      throw new Error('Utilisateur non trouvé ou méthode d\'authentification incorrecte');
+    if (!user || user.authMode !== 'OTP' || user.statut !== 'ACTIF') {
+      throw new AuthError('Code OTP invalide ou expiré');
+    }
+    if (user.otpLockedUntil && user.otpLockedUntil > now) {
+      throw new AuthError('Trop de tentatives. Demandez un nouveau code.', 429, 'OTP_LOCKED');
+    }
+    if (!user.otpExpiry || user.otpExpiry < now || !this.isValidOTP(otpCode, user.otpCode)) {
+      const attempts = (user.otpAttempts || 0) + 1;
+      await prisma.dueliste.update({
+        where: { id: user.id },
+        data: {
+          otpAttempts: attempts,
+          otpLockedUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null,
+          ...(attempts >= 5 ? { otpCode: null, otpExpiry: null } : {})
+        }
+      });
+      throw new AuthError('Code OTP invalide ou expiré');
     }
 
-    if (!user.otpCode || user.otpCode !== otpCode) {
-      throw new Error('Code OTP incorrect');
-    }
-
-    if (!user.otpExpiry || user.otpExpiry < new Date()) {
-      throw new Error('Code OTP expiré');
-    }
-
-    // Nettoyer l'OTP et marquer l'email comme vérifié
-    await prisma.dueliste.update({
+    const updatedUser = await prisma.dueliste.update({
       where: { id: user.id },
       data: {
         otpCode: null,
         otpExpiry: null,
+        otpAttempts: 0,
+        otpLockedUntil: null,
         emailVerified: true
       }
     });
 
-    const token = this.generateToken(user.id, user.pseudo);
-
-    return {
-      user: {
-        id: user.id,
-        pseudo: user.pseudo,
-        email: user.email,
-        authMode: user.authMode,
-        emailVerified: true
-      },
-      token
-    };
+    return { user: this.toSafeUser(updatedUser), token: this.generateToken(updatedUser) };
   }
 
-  // Récupérer un utilisateur par token
   async getUserFromToken(token) {
     const decoded = this.verifyToken(token);
-    
-    const user = await prisma.dueliste.findUnique({
-      where: { id: decoded.userId }
-    });
+    const user = await prisma.dueliste.findUnique({ where: { id: decoded.userId } });
 
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
+    if (!user || user.statut !== 'ACTIF' || (user.tokenVersion || 0) !== (decoded.tokenVersion || 0)) {
+      throw new AuthError('Token invalide ou expiré');
     }
+    return this.toSafeUser(user);
+  }
 
-    return {
-      id: user.id,
-      pseudo: user.pseudo,
-      email: user.email,
-      authMode: user.authMode,
-      emailVerified: user.emailVerified
-    };
+  async logout(userId) {
+    await prisma.dueliste.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } }
+    });
   }
 }
 
 module.exports = new AuthService();
+module.exports.AuthError = AuthError;

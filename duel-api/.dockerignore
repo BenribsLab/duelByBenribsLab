@@ -4,6 +4,9 @@ npm-debug.log*
 .npm
 
 # Environment files
+.env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
@@ -13,9 +16,11 @@ npm-debug.log*
 logs
 *.log
 
-# Database
-*.db
-*.db-journal
+# Database (les motifs doivent etre recursifs, sinon prisma/dev.db entre dans l'image)
+**/*.db
+**/*.db-journal
+**/*.sqlite
+**/*.sqlite3
 
 # OS generated files
 .DS_Store
@@ -33,3 +38,11 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Tests et outillage local
+jest.config.js
+jest.setup.js
+jest.globalSetup.js
+src/**/__tests__/
+prisma/.legacy-*.prisma
+scripts/.test-*

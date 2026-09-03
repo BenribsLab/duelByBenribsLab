@@ -89,21 +89,21 @@ class AdminAuthService {
    * Obtenir le token depuis le localStorage
    */
   getToken() {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return sessionStorage.getItem(this.TOKEN_KEY);
   }
 
   /**
    * Sauvegarder le token dans le localStorage
    */
   setToken(token) {
-    localStorage.setItem(this.TOKEN_KEY, token);
+    sessionStorage.setItem(this.TOKEN_KEY, token);
   }
 
   /**
    * Supprimer le token du localStorage
    */
   removeToken() {
-    localStorage.removeItem(this.TOKEN_KEY);
+    sessionStorage.removeItem(this.TOKEN_KEY);
   }
 
   /**

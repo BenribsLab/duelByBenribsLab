@@ -7,48 +7,10 @@ const { authenticateToken } = require('../middleware/auth');
 const {
   getAllDuellistes,
   getDuelisteById,
-  createDueliste,
   updateDueliste,
   deleteDueliste,
   markNotificationsAsRead
 } = require('../controllers/duellistesController');
-
-// Validation middleware pour la création
-const validateCreateDueliste = [
-  body('pseudo')
-    .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Le pseudo doit contenir entre 2 et 50 caractères')
-    .matches(/^[a-zA-Z0-9\s.\-_]+$/)
-    .withMessage('Le pseudo ne peut contenir que des lettres, chiffres, espaces, points, tirets et underscores'),
-  
-  body('avatarUrl')
-    .optional()
-    .custom((value) => {
-      // Accepter les URLs normales et les data URLs (base64)
-      if (!value) return true; // Optionnel
-      
-      // Vérifier si c'est une data URL (base64)
-      if (value.startsWith('data:image/')) {
-        return true;
-      }
-      
-      // Sinon, vérifier si c'est une URL valide
-      try {
-        new URL(value);
-        return true;
-      } catch {
-        throw new Error('L\'URL de l\'avatar doit être une URL valide ou une image base64');
-      }
-    }),
-  
-  body('categorie')
-    .optional()
-    .isIn(['JUNIOR', 'SENIOR'])
-    .withMessage('La catégorie doit être JUNIOR ou SENIOR'),
-  
-  handleValidation
-];
 
 // Validation middleware pour la mise à jour
 const validateUpdateDueliste = [
@@ -64,24 +26,18 @@ const validateUpdateDueliste = [
     .matches(/^[a-zA-Z0-9\s.\-_]+$/)
     .withMessage('Le pseudo ne peut contenir que des lettres, chiffres, espaces, points, tirets et underscores'),
   
+  // L'avatar est défini par POST /api/upload/avatar, qui génère lui-même le nom
+  // du fichier. On n'accepte donc ici que le chemin interne renvoyé par l'API :
+  // une URL libre ou une data URL permettrait de stocker du contenu arbitraire
+  // et de faire charger une ressource tierce par le navigateur des visiteurs.
   body('avatarUrl')
-    .optional()
+    .optional({ nullable: true })
     .custom((value) => {
-      // Accepter les URLs normales et les data URLs (base64)
-      if (!value) return true; // Optionnel
-      
-      // Vérifier si c'est une data URL (base64)
-      if (value.startsWith('data:image/')) {
-        return true;
+      if (value === null || value === '') return true;
+      if (!/^\/uploads\/avatars\/[A-Za-z0-9_-]+\.(jpg|png|gif|webp)$/.test(value)) {
+        throw new Error('Avatar invalide : utilisez le téléversement d\'avatar');
       }
-      
-      // Sinon, vérifier si c'est une URL valide
-      try {
-        new URL(value);
-        return true;
-      } catch {
-        throw new Error('L\'URL de l\'avatar doit être une URL valide ou une image base64');
-      }
+      return true;
     }),
   
   body('statut')
@@ -120,7 +76,6 @@ const validateQuery = [
 // Routes
 router.get('/', authenticateToken, validateQuery, getAllDuellistes);
 router.get('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, getDuelisteById);
-router.post('/', authenticateToken, validateCreateDueliste, createDueliste);
 router.put('/:id', authenticateToken, validateUpdateDueliste, updateDueliste);
 router.delete('/:id', authenticateToken, param('id').isInt({ min: 1 }).withMessage('L\'ID doit être un entier positif'), handleValidation, deleteDueliste);
 

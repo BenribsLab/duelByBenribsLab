@@ -28,6 +28,9 @@ class Duel_Auth {
      * @param array $user_data Les données de l'utilisateur
      */
     public function store_auth_data($token, $user_data) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
         $_SESSION['duel_token'] = $token;
         $_SESSION['duel_user'] = $user_data;
         $_SESSION['duel_login_time'] = time();
@@ -77,9 +80,16 @@ class Duel_Auth {
      * Déconnecter l'utilisateur
      */
     public function logout() {
+        $token = $this->get_token();
+        if ($token) {
+            $this->api_client->logout($token);
+        }
         unset($_SESSION['duel_token']);
         unset($_SESSION['duel_user']);
         unset($_SESSION['duel_login_time']);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
     }
     
     /**

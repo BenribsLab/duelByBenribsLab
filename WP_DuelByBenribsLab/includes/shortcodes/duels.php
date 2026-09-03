@@ -247,7 +247,7 @@ function duel_duels_shortcode($atts) {
             const formData = new FormData();
             formData.append('duel_action', action);
             formData.append('duel_id', duelId);
-            formData.append('user_id', <?php echo intval($user['id']); ?>);
+            formData.append('duel_action_nonce', '<?php echo esc_js(wp_create_nonce('duel_action_nonce')); ?>');
 
             // Utiliser redirection PHP au lieu d'AJAX pour éviter les conflits
             const form = document.createElement('form');
@@ -625,6 +625,11 @@ function handle_duel_action($api_client, $token, $user) {
     if (empty($_POST['duel_id']) || !is_numeric($_POST['duel_id'])) {
         wp_die('ID de duel invalide.', 'Erreur', array('back_link' => true));
     }
+    if (in_array($action, array('accept', 'refuse', 'accept_proposition'), true)) {
+        if (!isset($_POST['duel_action_nonce']) || !wp_verify_nonce($_POST['duel_action_nonce'], 'duel_action_nonce')) {
+            return '<div class="duel-error">Erreur de sécurité. Veuillez recharger la page.</div>';
+        }
+    }
     // Vérification du nonce pour les actions de création et score
     if ($action === 'create') {
         if (!isset($_POST['duel_nonce']) || !wp_verify_nonce($_POST['duel_nonce'], 'duel_create_action')) {
@@ -731,7 +736,7 @@ function handle_duel_action($api_client, $token, $user) {
             $current_url = add_query_arg('tab', 'mes-defis', $current_url);
         }
         
-        wp_redirect($current_url);
+        wp_safe_redirect($current_url);
         exit;
     } else {
         $error = isset($response['error']) ? $response['error'] : 'Erreur inconnue';

@@ -3,11 +3,12 @@ const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/auth');
 const { body } = require('express-validator');
 const validation = require('../middleware/validation');
+const { registerLimiter, loginLimiter, otpVerifyLimiter } = require('../middleware/securityRateLimits');
 
 const router = express.Router();
 
 // Route d'inscription
-router.post('/register', [
+router.post('/register', registerLimiter, [
   body('pseudo')
     .trim()
     .isLength({ min: 2, max: 30 })
@@ -22,8 +23,9 @@ router.post('/register', [
   
   body('password')
     .optional()
-    .isLength({ min: 6 })
-    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+    .isLength({ min: 10, max: 72 })
+    .custom((value) => Buffer.byteLength(value, 'utf8') <= 72)
+    .withMessage('Le mot de passe doit contenir entre 10 et 72 octets'),
   
   body('authMode')
     .optional()
@@ -34,12 +36,17 @@ router.post('/register', [
     .optional()
     .isBoolean()
     .withMessage('hasEmailAccess doit être un booléen'),
+
+  body('categorie')
+    .optional()
+    .isIn(['JUNIOR', 'SENIOR'])
+    .withMessage('Catégorie invalide'),
   
   validation.handleValidation,
 ], authController.register);
 
 // Route de connexion
-router.post('/login', [
+router.post('/login', loginLimiter, [
   body('pseudo')
     .optional()
     .trim()
@@ -54,6 +61,7 @@ router.post('/login', [
   
   body('password')
     .optional()
+    .isLength({ max: 128 })
     .custom((value) => {
       // Si un mot de passe est fourni, il doit avoir au moins 1 caractère
       if (value !== undefined && value !== null && value !== '' && value.length < 1) {
@@ -66,7 +74,7 @@ router.post('/login', [
 ], authController.login);
 
 // Route de vérification OTP
-router.post('/verify-otp', [
+router.post('/verify-otp', otpVerifyLimiter, [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -84,6 +92,6 @@ router.post('/verify-otp', [
 router.get('/me', authenticateToken, authController.getProfile);
 
 // Route de déconnexion
-router.post('/logout', authController.logout);
+router.post('/logout', authenticateToken, authController.logout);
 
 module.exports = router;

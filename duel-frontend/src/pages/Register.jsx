@@ -50,8 +50,8 @@ const Register = () => {
     try {
       // Validation des mots de passe si mode PASSWORD
       if (formData.authMode === 'PASSWORD') {
-        if (formData.password.length < 6) {
-          setError('Le mot de passe doit contenir au moins 6 caractères');
+        if (formData.password.length < 10) {
+          setError('Le mot de passe doit contenir au moins 10 caractères');
           setIsLoading(false);
           return;
         }
@@ -383,13 +383,15 @@ const Register = () => {
                       type="password"
                       required
                       className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                      placeholder="Minimum 6 caractères"
+                      minLength={10}
+                      maxLength={72}
+                      placeholder="Minimum 10 caractères"
                       value={formData.password}
                       onChange={handleInputChange}
                     />
                   </div>
                   <p className="mt-1 text-xs text-gray-600">
-                    Minimum 6 caractères
+                    Entre 10 et 72 caractères
                   </p>
                 </div>
 

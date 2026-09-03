@@ -1,45 +1,19 @@
-# Use the official Node.js runtime as the base image
-FROM node:18-slim
+FROM node:22-bookworm-slim
 
-# Install OpenSSL and other dependencies needed by Prisma
-RUN apt-get update -y && apt-get install -y openssl curl && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends openssl curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the container
 WORKDIR /app
-
-# Copy package.json and package-lock.json (if available)
 COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Install dependencies as root
-RUN npm ci --only=production
-
-# Copy the rest of the application code
 COPY . .
+RUN chmod +x entrypoint.sh \
+    && mkdir -p /app/uploads/avatars \
+    && chown -R node:node /app
 
-# Make entrypoint script executable
-RUN chmod +x entrypoint.sh
-
-# Generate Prisma client as root
-RUN npx prisma generate
-
-# Create a non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-
-# Create uploads directory structure with correct permissions
-RUN mkdir -p /app/uploads/avatars
-
-# Change ownership of EVERYTHING to nodejs user (including node_modules and uploads)
-RUN chown -R nodejs:nodejs /app
-
-# Switch to the nodejs user
-USER nodejs
-
-# Expose the port the app runs on
+USER node
 EXPOSE 3000
-
-# Use entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
-
-# Command to run the application
 CMD ["npm", "start"]

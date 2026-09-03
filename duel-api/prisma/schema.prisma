@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -19,6 +19,10 @@ model Dueliste {
   emailVerified   Boolean           @default(false)
   otpCode         String?
   otpExpiry       DateTime?
+  otpAttempts     Int       @default(0)
+  otpLastSentAt   DateTime?
+  otpLockedUntil  DateTime?
+  tokenVersion    Int       @default(0)
   nbVictoires     Int               @default(0)
   nbDefaites      Int               @default(0)
   nbMatchsTotal   Int               @default(0)

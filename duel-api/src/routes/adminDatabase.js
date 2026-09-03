@@ -9,6 +9,7 @@ const router = express.Router();
 
 // Middleware d'authentification admin pour toutes les routes
 router.use(authenticateAdmin);
+router.use(localhostOnly);
 
 /**
  * GET /api/admin/database/config
@@ -19,31 +20,13 @@ router.get('/config', localhostOnly, async (req, res) => {
   try {
     const config = databaseConfigService.getCurrentConfig();
     
-    // Debug: afficher les variables d'environnement et la config
-    console.log('🔍 Variables d\'environnement DB:');
-    console.log('  DB_PROVIDER:', process.env.DB_PROVIDER);
-    console.log('  DB_HOST:', process.env.DB_HOST);
-    console.log('  DB_USER:', process.env.DB_USER);
-    console.log('  DB_NAME:', process.env.DB_NAME);
-    console.log('  DB_PORT:', process.env.DB_PORT);
-    console.log('🔍 Config retournée:', config);
-    
-    // Pour localhost, inclure les variables d'environnement MySQL pour permettre les tests
-    const responseData = { ...config };
-    
-    // Ne pas exposer le password de la config actuelle, mais inclure les variables MySQL d'environnement
-    delete responseData.password;
-    
-    // Ajouter les variables d'environnement MySQL pour les tests (localhost uniquement)
-    if (process.env.DB_HOST || process.env.DB_USER || process.env.DB_PASS) {
-      responseData.mysqlEnv = {
-        host: process.env.DB_HOST || 'benribs.fr',
-        port: process.env.DB_PORT || '3306',
-        database: process.env.DB_NAME || 'duel',
-        username: process.env.DB_USER || 'duel',
-        password: process.env.DB_PASS || ''
-      };
-    }
+    const responseData = {
+      provider: config.provider,
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      username: config.username
+    };
     
     res.json({
       success: true,
@@ -337,7 +320,7 @@ router.post('/check-content', [
 // Migrer les données
 router.post('/migrate-data', authenticateAdmin, async (req, res) => {
   console.log('🚀 Début de la migration des données...');
-  console.log('📋 Configuration reçue:', req.body);
+  console.log('Migration demandée pour le provider:', req.body.provider);
   
   try {
     const config = req.body;
@@ -347,10 +330,9 @@ router.post('/migrate-data', authenticateAdmin, async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('❌ Erreur lors de la migration:', error);
-    console.error('❌ Stack trace:', error.stack);
     res.status(500).json({
       success: false,
-      message: error.message || 'Erreur serveur lors de la migration des données'
+      message: 'Erreur serveur lors de la migration des données'
     });
   }
 });
@@ -379,7 +361,7 @@ router.post('/finalize-migration', async (req, res) => {
     console.error('❌ Erreur lors de la finalisation:', error);
     res.status(500).json({
       success: false,
-      message: `Erreur lors de la finalisation: ${error.message}`
+      message: 'Erreur lors de la finalisation'
     });
   }
 });
@@ -408,7 +390,7 @@ router.post('/switch', async (req, res) => {
     // Régénérer le client Prisma
     const { execSync } = require('child_process');
     console.log('📦 Régénération du client Prisma...');
-    execSync('npx prisma generate', { cwd: process.cwd() });
+    execSync('npx --no-install prisma generate', { cwd: process.cwd() });
     
     console.log(`✅ Switch vers ${provider} terminé`);
     
@@ -445,7 +427,7 @@ router.post('/switch', async (req, res) => {
     console.error('❌ Erreur lors du switch:', error);
     res.status(500).json({
       success: false,
-      message: `Erreur lors du switch: ${error.message}`
+      message: 'Erreur lors du switch'
     });
   }
 });

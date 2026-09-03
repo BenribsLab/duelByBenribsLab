@@ -32,10 +32,10 @@ api.interceptors.request.use(
       // Déterminer quel token utiliser selon la route
       if (config.url && config.url.includes('/admin/')) {
         // Routes admin - utiliser le token admin
-        token = localStorage.getItem('admin_auth_token');
+        token = sessionStorage.getItem('admin_auth_token');
       } else {
         // Routes utilisateur normales - utiliser le token utilisateur
-        token = localStorage.getItem('token');
+        token = sessionStorage.getItem('token');
       }
       
       if (token) {
@@ -58,8 +58,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expiré ou invalide
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       
       // Rediriger vers la page de connexion si ce n'est pas déjà une route d'auth
       if (!window.location.pathname.includes('/login') && 
@@ -76,7 +76,6 @@ api.interceptors.response.use(
 export const duellistesService = {
   getAll: () => api.get('/duellistes'),
   getById: (id) => api.get(`/duellistes/${id}`),
-  create: (dueliste) => api.post('/duellistes', dueliste),
   update: (id, dueliste) => api.put(`/duellistes/${id}`, dueliste),
   delete: (id) => api.delete(`/duellistes/${id}`),
   markNotificationsAsRead: (id) => api.put(`/duellistes/${id}/notifications/mark-read`),

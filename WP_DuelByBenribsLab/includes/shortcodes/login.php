@@ -237,7 +237,7 @@ add_action('init', function() {
         if (wp_verify_nonce($_POST['duel_nonce'], 'duel_logout_nonce')) {
             $auth = new Duel_Auth();
             $auth->logout();
-            wp_redirect($_SERVER['REQUEST_URI']);
+            wp_safe_redirect($_SERVER['REQUEST_URI']);
             exit;
         }
     }

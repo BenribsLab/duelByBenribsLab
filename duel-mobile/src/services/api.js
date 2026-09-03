@@ -42,7 +42,8 @@ api.interceptors.response.use(
 export const duellistesService = {
   getAll: () => api.get('/duellistes'),
   getById: (id) => api.get(`/duellistes/${id}`),
-  create: (dueliste) => api.post('/duellistes', dueliste),
+  // La création directe de dueliste a été retirée de l'API : l'inscription
+  // passe désormais par /auth/register.
   update: (id, dueliste) => api.put(`/duellistes/${id}`, dueliste),
   delete: (id) => api.delete(`/duellistes/${id}`),
 };
@@ -78,41 +79,9 @@ export const invitationsService = {
   }
 };
 
-// Services d'administration
-export const adminService = {
-  // Authentification admin
-  login: (credentials) => api.post('/admin/auth/login', credentials),
-  
-  // Gestion des duels
-  duels: {
-    getAll: (params = {}) => {
-      const token = localStorage.getItem('adminToken');
-      return api.get('/admin/duels', {
-        params,
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    },
-    getStatistiques: () => {
-      const token = localStorage.getItem('adminToken');
-      return api.get('/admin/duels/statistiques', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    },
-    supprimer: (id, raison) => {
-      const token = localStorage.getItem('adminToken');
-      return api.delete(`/admin/duels/${id}`, {
-        data: { raison },
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    },
-    forcerValidation: (id, scoreData) => {
-      const token = localStorage.getItem('adminToken');
-      return api.put(`/admin/duels/${id}/forcer-validation`, scoreData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    }
-  }
-};
+// Les services d'administration vivent dans ./adminService.js, qui lit le jeton
+// admin depuis adminAuthService (conservé uniquement en mémoire). L'ancien
+// export défini ici lisait localStorage.adminToken, que plus rien n'écrit.
 
 // Service d'upload
 export const uploadService = {

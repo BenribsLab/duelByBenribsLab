@@ -10,9 +10,31 @@ services:
       NODE_ENV: production
       PORT: 3000
       DOCKER_ENV: "true"
-      ALLOWED_ORIGINS: "https://duel.benribs.fr,https://api-duel.benribs.fr,http://localhost:5173,http://localhost:3003,https://localhost"
+      DB_PROVIDER: sqlite
+      # Chemin absolu : le volume sqlite_data est monte sur /app/prisma
+      DATABASE_URL: "file:/app/prisma/dev.db"
+      # Bootstrap explicite du schema (a passer a true uniquement pour une premiere
+      # installation ou apres une migration validee, puis a remettre a false)
+      RUN_DB_SCHEMA_SYNC: "${RUN_DB_SCHEMA_SYNC:-false}"
+      # Nombre de relais devant l'API. Indispensable : sans lui, la limitation de
+      # debit compte toutes les requetes du proxy dans un seul compteur partage.
+      # 1 = un seul proxy devant l'API (topologie de ce compose).
+      # Ajouter un relais public devant (Traefik, Cloudflare...) => passer a 2.
+      TRUSTED_PROXIES: "${TRUSTED_PROXIES:-1}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET requis}"
+      ADMIN_JWT_SECRET: "${ADMIN_JWT_SECRET:?ADMIN_JWT_SECRET requis}"
+      ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}"
+      ADMIN_PASSWORD_HASH: "${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH bcrypt requis}"
+      OTP_SECRET: "${OTP_SECRET:?OTP_SECRET requis}"
+      TRACKING_SECRET: "${TRACKING_SECRET:?TRACKING_SECRET requis}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://duel.benribs.fr}"
+      API_URL: "${API_URL:-https://api-duel.benribs.fr}"
+      # Origines CORS. Les deux entrees Capacitor sont indispensables a
+      # l application mobile ; les origines localhost servent au developpement
+      # et peuvent etre retirees en production.
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://duel.benribs.fr,https://api-duel.benribs.fr,capacitor://localhost,https://localhost}"
     ports:
-      - "3003:3000"
+      - "127.0.0.1:3003:3000"
     volumes:
       # Persiste la base SQLite et les fichiers de config avec les bonnes permissions
       - sqlite_data:/app/prisma
@@ -21,6 +43,21 @@ services:
       - uploads_data:/app/uploads
     networks:
       - duel-network
+    # Durcissement du conteneur : aucune elevation de privilege possible, toutes
+    # les capacites Linux abandonnees (le process tourne en utilisateur `node`
+    # sur le port 3000, il n en a besoin d aucune).
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Borne la consommation pour qu un abus ne puisse pas emporter tout l hote.
+    mem_limit: 512m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -35,11 +72,29 @@ services:
     container_name: duel-frontend
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       - duel-api
     networks:
       - duel-network
+    security_opt:
+      - no-new-privileges:true
+    # nginx doit pouvoir se lier au port 80 et deposer ses privileges pour ses
+    # workers : on ne garde que ces capacites-la.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    mem_limit: 128m
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s

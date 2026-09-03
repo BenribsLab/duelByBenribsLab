@@ -174,6 +174,10 @@ class Duel_API_Client {
     public function get_profile($token) {
         return $this->make_request('auth/me', array(), 'GET', $token);
     }
+
+    public function logout($token) {
+        return $this->make_request('auth/logout', array(), 'POST', $token);
+    }
     
     /**
      * Récupérer le classement (appel public sans authentification)

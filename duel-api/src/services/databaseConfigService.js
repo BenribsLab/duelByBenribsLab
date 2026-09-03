@@ -474,12 +474,12 @@ class DatabaseConfigService {
       try {
         if (isDocker) {
           // Dans Docker, utiliser npx prisma generate directement
-          execSync('cd /app && npx prisma generate', { 
+          execSync('cd /app && npx --no-install prisma generate', { 
             stdio: 'pipe',
             encoding: 'utf-8'
           });
         } else {
-          execSync('npx prisma generate', { 
+          execSync('npx --no-install prisma generate', { 
             stdio: 'pipe',
             encoding: 'utf-8',
             cwd: process.cwd()

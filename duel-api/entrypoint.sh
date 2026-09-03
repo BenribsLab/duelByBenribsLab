@@ -1,14 +1,18 @@
-#!/bin/bash
-set -e
+#!/bin/sh
+set -eu
 
-echo "🔧 Configuration de la base de données..."
-node -e "require('./src/database.js')"
+provider="${DB_PROVIDER:-sqlite}"
+case "$provider" in
+  sqlite|mysql) ;;
+  *) echo "DB_PROVIDER non supporté: $provider" >&2; exit 1 ;;
+esac
 
-echo "🔧 Génération du client Prisma..."
-npx prisma generate
+cp "prisma/schema.${provider}.prisma" prisma/schema.prisma
+npx --no-install prisma generate
 
-echo "🔧 Initialisation de la base de données..."
-npx prisma db push
+if [ "${RUN_DB_SCHEMA_SYNC:-false}" = "true" ]; then
+  echo "Synchronisation explicite du schéma (les changements destructifs seront refusés)"
+  npx --no-install prisma db push
+fi
 
-echo "🚀 Démarrage du serveur..."
 exec "$@"

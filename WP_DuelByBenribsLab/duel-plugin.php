@@ -22,7 +22,9 @@ define('DUEL_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DUEL_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
 // URL de l'API par défaut (configurable dans l'admin)
-define('DUEL_API_BASE_URL', 'https://duel.benribs.fr/api');
+// L'API a son propre domaine : le domaine du frontend ne relaie plus /api.
+// Surchargeable par l'option WordPress `duel_api_base_url`.
+define('DUEL_API_BASE_URL', 'https://api-duel.benribs.fr/api');
 
 /**
  * Classe principale du plugin
@@ -96,6 +98,14 @@ class DuelByBenribsLab {
     public function init_plugin() {
         // Démarrer la session si nécessaire
         if (!session_id()) {
+            session_set_cookie_params(array(
+                'lifetime' => 0,
+                'path' => defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/',
+                'domain' => defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '',
+                'secure' => is_ssl(),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ));
             session_start();
         }
         
@@ -129,7 +139,7 @@ class DuelByBenribsLab {
                     if (class_exists('Duel_Auth')) {
                         $auth = new Duel_Auth();
                         $auth->logout();
-                        wp_redirect($_SERVER['REQUEST_URI']);
+                        wp_safe_redirect($_SERVER['REQUEST_URI']);
                         exit;
                     }
                 }
@@ -143,7 +153,7 @@ class DuelByBenribsLab {
                     
                     // Traiter selon le type d'action
                     if ($_POST['duel_action'] === 'back_to_start') {
-                        wp_redirect($_SERVER['REQUEST_URI']);
+                        wp_safe_redirect($_SERVER['REQUEST_URI']);
                         exit;
                     }
                     
@@ -186,7 +196,7 @@ class DuelByBenribsLab {
                     // Stocker le résultat en session pour l'affichage
                     $_SESSION['duel_login_step'] = $result;
                     if (isset($result['success']) && $result['success']) {
-                        wp_redirect($_SERVER['REQUEST_URI']);
+                        wp_safe_redirect($_SERVER['REQUEST_URI']);
                         exit;
                     }
                 }
@@ -200,7 +210,7 @@ class DuelByBenribsLab {
                     if (isset($result['success']) && $result['success']) {
                         // Supprimer les données de session après connexion réussie
                         unset($_SESSION['duel_login_step']);
-                        wp_redirect($_SERVER['REQUEST_URI']);
+                        wp_safe_redirect($_SERVER['REQUEST_URI']);
                         exit;
                     } else {
                         $_SESSION['duel_login_step'] = $result;
@@ -216,7 +226,7 @@ class DuelByBenribsLab {
                     if (isset($result['success']) && $result['success']) {
                         // Supprimer les données de session après connexion réussie
                         unset($_SESSION['duel_login_step']);
-                        wp_redirect($_SERVER['REQUEST_URI']);
+                        wp_safe_redirect($_SERVER['REQUEST_URI']);
                         exit;
                     } else {
                         $_SESSION['duel_login_step'] = $result;

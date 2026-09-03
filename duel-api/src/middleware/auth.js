@@ -3,8 +3,9 @@ const authService = require('../services/authService');
 // Middleware pour vérifier l'authentification
 const authenticateToken = async (req, res, next) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const authHeader = req.headers.authorization;
+    const match = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+([^\s]+)$/i) : null;
+    const token = match && match[1];
 
     if (!token) {
       return res.status(401).json({
@@ -17,7 +18,7 @@ const authenticateToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({
+    return res.status(401).json({
       success: false,
       error: 'Token invalide ou expiré'
     });
@@ -27,8 +28,9 @@ const authenticateToken = async (req, res, next) => {
 // Middleware optionnel (ne bloque pas si pas de token)
 const optionalAuth = async (req, res, next) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    const match = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+([^\s]+)$/i) : null;
+    const token = match && match[1];
 
     if (token) {
       const user = await authService.getUserFromToken(token);

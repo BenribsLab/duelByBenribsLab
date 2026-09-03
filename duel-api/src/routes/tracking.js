@@ -1,160 +1,111 @@
 const express = require('express');
-const router = express.Router();
 const { prisma } = require('../database');
+const { authenticateToken } = require('../middleware/auth');
+const { verifyTrackingToken } = require('../utils/trackingToken');
 
-/**
- * GET /api/track/email-open/:invitationId
- * Tracker l'ouverture d'un email d'invitation (pixel invisible)
- */
-router.get('/email-open/:invitationId', async (req, res) => {
+const router = express.Router();
+const PIXEL = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+  'base64'
+);
+
+function pixel(res) {
+  res.set({
+    'Content-Type': 'image/png',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0'
+  });
+  return res.send(PIXEL);
+}
+
+function metadata(req) {
+  return {
+    userAgent: (req.get('User-Agent') || '').slice(0, 500) || null,
+    ipAddress: anonymizeIP(req.ip),
+    referer: (req.get('Referer') || '').slice(0, 500) || null
+  };
+}
+
+router.get('/email-open/:trackingToken', async (req, res) => {
   try {
-    const { invitationId } = req.params;
-
-    // Mettre à jour l'invitation avec l'heure d'ouverture
-    await prisma.emailInvitation.update({
-      where: { id: parseInt(invitationId) },
-      data: {
-        openedAt: new Date(),
-        status: 'OPENED',
-        userAgent: req.get('User-Agent') || null,
-        ipAddress: anonymizeIP(req.ip),
-        referer: req.get('Referer') || null
-      }
-    });
-
-    // Retourner un pixel transparent 1x1
-    const pixel = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-      'base64'
-    );
-
-    res.set({
-      'Content-Type': 'image/png',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
-
-    res.send(pixel);
-
+    const verified = verifyTrackingToken(req.params.trackingToken);
+    if (verified) {
+      await prisma.emailInvitation.updateMany({
+        where: { id: verified.invitationId, status: { in: ['PENDING', 'SENT'] } },
+        data: { openedAt: new Date(), status: 'OPENED', ...metadata(req) }
+      });
+    }
   } catch (error) {
-    console.error('Erreur tracking ouverture email:', error);
-    // Retourner quand même le pixel pour ne pas casser l'affichage
-    const pixel = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    res.set('Content-Type', 'image/png');
-    res.send(pixel);
+    console.error('Erreur tracking ouverture email:', error.message);
   }
+  return pixel(res);
 });
 
-/**
- * GET /api/track/invitation-click/:invitationId
- * Tracker le clic sur un lien d'invitation et rediriger
- */
-router.get('/invitation-click/:invitationId', async (req, res) => {
+router.get('/invitation-click/:trackingToken', async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   try {
-    const { invitationId } = req.params;
-    const { redirect } = req.query;
+    const verified = verifyTrackingToken(req.params.trackingToken);
+    if (!verified) return res.redirect(frontendUrl);
 
-    // Mettre à jour l'invitation avec l'heure de clic
-    const invitation = await prisma.emailInvitation.update({
-      where: { id: parseInt(invitationId) },
-      data: {
-        clickedAt: new Date(),
-        status: 'CLICKED',
-        userAgent: req.get('User-Agent') || null,
-        ipAddress: anonymizeIP(req.ip),
-        referer: req.get('Referer') || null
-      },
-      include: {
-        inviter: {
-          select: { pseudo: true }
-        }
-      }
+    const invitation = await prisma.emailInvitation.findUnique({
+      where: { id: verified.invitationId },
+      include: { inviter: { select: { pseudo: true } } }
     });
+    if (!invitation || invitation.expiresAt < new Date()) return res.redirect(frontendUrl);
 
-    // URL de redirection par défaut vers la page d'inscription
-    const defaultRedirect = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const finalRedirect = redirect || `${defaultRedirect}/register?invitedBy=${encodeURIComponent(invitation.inviter.pseudo)}&invitationId=${invitationId}`;
-
-    res.redirect(finalRedirect);
-
-  } catch (error) {
-    console.error('Erreur tracking clic invitation:', error);
-    // Rediriger vers la page d'accueil en cas d'erreur
-    const fallbackUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(fallbackUrl);
-  }
-});
-
-/**
- * POST /api/track/invitation-registered
- * Marquer une invitation comme ayant mené à une inscription
- */
-router.post('/invitation-registered', async (req, res) => {
-  try {
-    const { invitationId, newUserId } = req.body;
-
-    if (!invitationId || !newUserId) {
-      return res.status(400).json({
-        success: false,
-        error: 'invitationId et newUserId requis'
+    if (invitation.status !== 'REGISTERED') {
+      await prisma.emailInvitation.update({
+        where: { id: invitation.id },
+        data: { clickedAt: new Date(), status: 'CLICKED', ...metadata(req) }
       });
     }
 
-    // Mettre à jour l'invitation
-    await prisma.emailInvitation.update({
-      where: { id: parseInt(invitationId) },
-      data: {
-        registeredAt: new Date(),
-        registeredUserId: parseInt(newUserId),
-        status: 'REGISTERED'
-      }
+    const query = new URLSearchParams({
+      invitedBy: invitation.inviter.pseudo,
+      invitationToken: req.params.trackingToken
     });
-
-    res.json({
-      success: true,
-      message: 'Conversion d\'invitation enregistrée'
-    });
-
+    return res.redirect(`${frontendUrl.replace(/\/$/, '')}/register?${query}`);
   } catch (error) {
-    console.error('Erreur enregistrement conversion:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur serveur'
-    });
+    console.error('Erreur tracking clic invitation:', error.message);
+    return res.redirect(frontendUrl);
   }
 });
 
-/**
- * Utilitaire pour anonymiser les adresses IP
- */
+router.post('/invitation-registered', authenticateToken, async (req, res) => {
+  try {
+    const verified = verifyTrackingToken(req.body.invitationToken);
+    if (!verified) return res.status(400).json({ success: false, error: 'Invitation invalide ou expirée' });
+
+    const invitation = await prisma.emailInvitation.findUnique({ where: { id: verified.invitationId } });
+    if (!invitation || !req.user.email || invitation.email.toLowerCase() !== req.user.email.toLowerCase()) {
+      return res.status(403).json({ success: false, error: 'Cette invitation ne correspond pas au compte' });
+    }
+
+    await prisma.emailInvitation.update({
+      where: { id: invitation.id },
+      data: {
+        registeredAt: new Date(),
+        registeredUserId: req.user.id,
+        status: 'REGISTERED'
+      }
+    });
+    return res.json({ success: true, message: 'Conversion d\'invitation enregistrée' });
+  } catch (error) {
+    console.error('Erreur enregistrement conversion:', error.message);
+    return res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 function anonymizeIP(ip) {
   if (!ip) return null;
-  
-  try {
-    // Pour IPv4, garder seulement les 3 premiers octets
-    if (ip.includes('.')) {
-      const parts = ip.split('.');
-      if (parts.length === 4) {
-        return `${parts[0]}.${parts[1]}.${parts[2]}.0`;
-      }
-    }
-    
-    // Pour IPv6, garder seulement le préfixe
-    if (ip.includes(':')) {
-      const parts = ip.split(':');
-      if (parts.length >= 4) {
-        return `${parts[0]}:${parts[1]}:${parts[2]}:${parts[3]}::`;
-      }
-    }
-    
-    return ip.substring(0, 10) + 'xxx'; // Fallback
-  } catch (error) {
-    return 'anonymized';
+  const normalized = ip.replace(/^::ffff:/, '');
+  if (normalized.includes('.')) {
+    const parts = normalized.split('.');
+    return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.0` : null;
   }
+  if (normalized.includes(':')) return `${normalized.split(':').slice(0, 4).join(':')}::`;
+  return null;
 }
 
 module.exports = router;

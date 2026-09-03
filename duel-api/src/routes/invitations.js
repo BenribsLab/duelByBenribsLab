@@ -3,12 +3,20 @@ const router = express.Router();
 const { prisma } = require('../database');
 const emailService = require('../services/emailService');
 const { authenticateToken } = require('../middleware/auth');
+const { body } = require('express-validator');
+const { handleValidation } = require('../middleware/validation');
+const { invitationLimiter } = require('../middleware/securityRateLimits');
 
 /**
  * POST /api/invitations/email
  * Envoyer une invitation par email
  */
-router.post('/email', authenticateToken, async (req, res) => {
+router.post('/email', authenticateToken, invitationLimiter, [
+  body('email').isEmail().normalizeEmail().withMessage('Format email invalide'),
+  body('recipientName').optional({ nullable: true }).trim().isLength({ max: 80 })
+    .matches(/^[\p{L}\p{M}\s.'-]*$/u).withMessage('Nom du destinataire invalide'),
+  handleValidation
+], async (req, res) => {
   try {
     const { email, recipientName } = req.body;
     const inviterId = req.user.id;
@@ -32,10 +40,11 @@ router.post('/email', authenticateToken, async (req, res) => {
 
     // Récupérer les infos de l'inviteur
     const inviter = await prisma.dueliste.findUnique({
-      where: { id: inviterId }
+      where: { id: inviterId },
+      select: { id: true, pseudo: true, statut: true }
     });
 
-    if (!inviter) {
+    if (!inviter || inviter.statut !== 'ACTIF') {
       return res.status(404).json({
         success: false,
         error: 'Utilisateur inviteur non trouvé'
@@ -52,20 +61,27 @@ router.post('/email', authenticateToken, async (req, res) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        error: 'Cette personne est déjà inscrite',
-        userExists: true,
-        existingUser: {
-          id: existingUser.id,
-          pseudo: existingUser.pseudo
-        }
+        error: 'Cette adresse ne peut pas recevoir une invitation'
       });
     }
 
-    // Vérifier si une invitation récente existe déjà
+    const dailyInvitationCount = await prisma.emailInvitation.count({
+      where: {
+        inviterId,
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      }
+    });
+    if (dailyInvitationCount >= 10) {
+      return res.status(429).json({ success: false, error: 'Limite quotidienne d\'invitations atteinte' });
+    }
+
+    // Vérifier si une invitation récente existe déjà.
+    // Les invitations dont l'envoi a échoué (FAILED) ne bloquent pas une nouvelle tentative.
     const recentInvitation = await prisma.emailInvitation.findFirst({
       where: {
         email: email,
         inviterId: inviterId,
+        status: { not: 'FAILED' },
         createdAt: {
           gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24h
         }
@@ -90,19 +106,34 @@ router.post('/email', authenticateToken, async (req, res) => {
       }
     });
 
-    // Envoyer l'email d'invitation avec l'ID pour le tracking
-    await emailService.sendInvitationEmail(
-      email,
-      inviter.pseudo, // Utiliser le pseudo comme nom d'affichage
-      inviter.pseudo,
-      recipientName,
-      invitation.id // Ajouter l'ID pour le tracking
-    );
+    // Envoyer l'email d'invitation avec l'ID pour le tracking.
+    // En cas d'échec, l'invitation est marquée FAILED pour ne pas rester
+    // indéfiniment en attente et ne pas bloquer une nouvelle tentative.
+    try {
+      await emailService.sendInvitationEmail(
+        email,
+        inviter.pseudo, // Utiliser le pseudo comme nom d'affichage
+        inviter.pseudo,
+        recipientName,
+        invitation.id,
+        invitation.expiresAt
+      );
+    } catch (sendError) {
+      console.error(`Echec d'envoi d'une invitation:`, sendError.message);
+      await prisma.emailInvitation.update({
+        where: { id: invitation.id },
+        data: { status: 'FAILED' }
+      }).catch(() => {});
+      return res.status(503).json({
+        success: false,
+        error: `Impossible d'envoyer l'invitation pour le moment`
+      });
+    }
 
     // Mettre à jour le statut à 'SENT'
     await prisma.emailInvitation.update({
       where: { id: invitation.id },
-      data: { 
+      data: {
         status: 'SENT'
       }
     });
@@ -127,61 +158,6 @@ router.post('/email', authenticateToken, async (req, res) => {
 });
 
 /**
- * GET /api/invitations/check-email
- * Vérifier si un email est déjà inscrit
- */
-router.get('/check-email', authenticateToken, async (req, res) => {
-  try {
-    const { email } = req.query;
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email requis'
-      });
-    }
-
-    // Validation format email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Format email invalide',
-        isValid: false
-      });
-    }
-
-    // Vérifier si l'email existe déjà
-    const existingUser = await prisma.dueliste.findFirst({
-      where: {
-        email: email
-      },
-      select: {
-        id: true,
-        pseudo: true
-      }
-    });
-
-    res.json({
-      success: true,
-      data: {
-        email: email,
-        exists: !!existingUser,
-        user: existingUser || null,
-        isValid: true
-      }
-    });
-
-  } catch (error) {
-    console.error('Erreur lors de la vérification de l\'email:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur serveur lors de la vérification'
-    });
-  }
-});
-
-/**
  * GET /api/invitations/my-invitations
  * Récupérer les invitations envoyées par l'utilisateur connecté
  */
@@ -192,7 +168,19 @@ router.get('/my-invitations', authenticateToken, async (req, res) => {
     const invitations = await prisma.emailInvitation.findMany({
       where: { inviterId: inviterId },
       orderBy: { createdAt: 'desc' },
-      take: 20 // Limiter à 20 invitations récentes
+      take: 20, // Limiter à 20 invitations récentes
+      // Les métadonnées de tracking (IP, user-agent, referer) restent internes
+      select: {
+        id: true,
+        email: true,
+        recipientName: true,
+        status: true,
+        openedAt: true,
+        clickedAt: true,
+        registeredAt: true,
+        expiresAt: true,
+        createdAt: true
+      }
     });
 
     res.json({

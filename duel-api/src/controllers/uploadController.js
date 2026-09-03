@@ -1,140 +1,67 @@
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { prisma } = require('../database');
-const { deleteAvatarFile, getAvatarUrl, getFilenameFromUrl } = require('../middleware/upload');
+const {
+  avatarsDir,
+  detectImageType,
+  deleteAvatarFile,
+  getAvatarUrl,
+  getFilenameFromUrl
+} = require('../middleware/upload');
 
-/**
- * Upload d'un avatar
- * POST /api/upload/avatar
- */
 async function uploadAvatar(req, res) {
+  let newFilename = null;
   try {
-    // Vérifier qu'un fichier a été uploadé
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'Aucun fichier fourni'
-      });
+    if (!req.file) return res.status(400).json({ success: false, error: 'Aucun fichier fourni' });
+
+    const imageType = detectImageType(req.file.buffer);
+    if (!imageType || imageType.mime !== req.file.mimetype) {
+      return res.status(400).json({ success: false, error: 'Le contenu du fichier ne correspond pas à une image autorisée' });
     }
 
-    // Récupérer l'ID de l'utilisateur depuis le token d'authentification
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Utilisateur non authentifié'
-      });
-    }
-
-    // Récupérer l'ancien avatar de l'utilisateur pour le supprimer
     const user = await prisma.dueliste.findUnique({
-      where: { id: userId },
+      where: { id: req.user.id },
       select: { avatarUrl: true }
     });
+    if (!user) return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'Utilisateur non trouvé'
-      });
-    }
+    newFilename = `avatar_${crypto.randomBytes(24).toString('hex')}${imageType.extension}`;
+    await fs.promises.writeFile(path.join(avatarsDir, newFilename), req.file.buffer, { flag: 'wx', mode: 0o640 });
+    const avatarUrl = getAvatarUrl(newFilename);
+    await prisma.dueliste.update({ where: { id: req.user.id }, data: { avatarUrl } });
 
-    // Générer l'URL publique du nouvel avatar
-    const avatarUrl = getAvatarUrl(req.file.filename);
+    const oldFilename = getFilenameFromUrl(user.avatarUrl);
+    if (oldFilename) deleteAvatarFile(oldFilename);
 
-    // Mettre à jour l'avatar de l'utilisateur en base de données
-    await prisma.dueliste.update({
-      where: { id: userId },
-      data: { avatarUrl: avatarUrl }
-    });
-
-    // Supprimer l'ancien fichier avatar s'il existe
-    if (user.avatarUrl) {
-      const oldFilename = getFilenameFromUrl(user.avatarUrl);
-      if (oldFilename) {
-        deleteAvatarFile(oldFilename);
-      }
-    }
-
-    res.json({
+    return res.json({
       success: true,
-      data: {
-        avatarUrl: avatarUrl,
-        filename: req.file.filename,
-        size: req.file.size
-      },
+      data: { avatarUrl, size: req.file.size },
       message: 'Avatar uploadé avec succès'
     });
-
   } catch (error) {
-    console.error('Erreur uploadAvatar:', error);
-    
-    // En cas d'erreur, supprimer le fichier uploadé
-    if (req.file) {
-      deleteAvatarFile(req.file.filename);
-    }
-    
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de l\'upload de l\'avatar'
-    });
+    if (newFilename) deleteAvatarFile(newFilename);
+    console.error('Erreur uploadAvatar:', error.message);
+    return res.status(500).json({ success: false, error: 'Erreur lors de l\'upload de l\'avatar' });
   }
 }
 
-/**
- * Supprimer l'avatar d'un utilisateur
- * DELETE /api/upload/avatar
- */
 async function deleteAvatar(req, res) {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Utilisateur non authentifié'
-      });
-    }
-
-    // Récupérer l'avatar actuel de l'utilisateur
     const user = await prisma.dueliste.findUnique({
-      where: { id: userId },
+      where: { id: req.user.id },
       select: { avatarUrl: true }
     });
+    if (!user) return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'Utilisateur non trouvé'
-      });
-    }
-
-    // Supprimer l'avatar de la base de données
-    await prisma.dueliste.update({
-      where: { id: userId },
-      data: { avatarUrl: null }
-    });
-
-    // Supprimer le fichier physique
-    if (user.avatarUrl) {
-      const filename = getFilenameFromUrl(user.avatarUrl);
-      if (filename) {
-        deleteAvatarFile(filename);
-      }
-    }
-
-    res.json({
-      success: true,
-      message: 'Avatar supprimé avec succès'
-    });
-
+    await prisma.dueliste.update({ where: { id: req.user.id }, data: { avatarUrl: null } });
+    const filename = getFilenameFromUrl(user.avatarUrl);
+    if (filename) deleteAvatarFile(filename);
+    return res.json({ success: true, message: 'Avatar supprimé avec succès' });
   } catch (error) {
-    console.error('Erreur deleteAvatar:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la suppression de l\'avatar'
-    });
+    console.error('Erreur deleteAvatar:', error.message);
+    return res.status(500).json({ success: false, error: 'Erreur lors de la suppression de l\'avatar' });
   }
 }
 
-module.exports = {
-  uploadAvatar,
-  deleteAvatar
-};
+module.exports = { uploadAvatar, deleteAvatar };

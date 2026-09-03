@@ -347,7 +347,7 @@
 
 .duel-classement-row {
     display: grid;
-    grid-template-columns: 60px 60px 1fr 80px 80px 80px 80px;
+    grid-template-columns: 60px 60px 1fr 80px 80px;
     gap: 10px;
     padding: 15px 20px;
     border-bottom: 1px solid #eee;
@@ -468,19 +468,12 @@
     color: #f44336;
 }
 
-.duel-matches-cell,
-.duel-touches-cell {
-    text-align: center;
-    font-weight: 600;
-    color: #555;
-}
-
-.duel-winrate-cell {
+.duel-points-cell {
     text-align: center;
 }
 
-.duel-winrate {
-    font-weight: 600;
+.duel-points {
+    font-weight: 700;
     color: #667eea;
 }
 
@@ -499,11 +492,6 @@
         gap: 8px;
         padding: 12px 15px;
         font-size: 14px;
-    }
-    
-    .duel-touches-cell,
-    .duel-winrate-cell {
-        display: none;
     }
     
     .duel-classement-avatar,
@@ -533,7 +521,7 @@
         padding: 10px 12px;
     }
     
-    .duel-matches-cell {
+    .duel-stats-cell {
         display: none;
     }
     

@@ -21,8 +21,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
+        const storedToken = sessionStorage.getItem('token');
+        const storedUser = sessionStorage.getItem('user');
 
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -34,8 +34,8 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('Erreur lors de l\'initialisation de l\'authentification:', error);
         // Nettoyer les données corrompues
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
       } finally {
         setLoading(false);
       }
@@ -50,9 +50,8 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       setToken(authToken);
       
-      // Sauvegarder dans localStorage
-      localStorage.setItem('token', authToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      sessionStorage.setItem('token', authToken);
+      sessionStorage.setItem('user', JSON.stringify(userData));
       
       // Configurer axios
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
@@ -63,14 +62,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Fonction de déconnexion
-  const logout = () => {
+  const logout = async (revoke = true) => {
     try {
+      if (revoke && token) {
+        await axios.post(`${config.API_BASE_URL}/auth/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => {});
+      }
       setUser(null);
       setToken(null);
       
       // Nettoyer localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       
       // Nettoyer axios
       delete axios.defaults.headers.common['Authorization'];
@@ -86,7 +90,7 @@ export const AuthProvider = ({ children }) => {
       setUser(newUserData);
       
       // Mettre à jour localStorage
-      localStorage.setItem('user', JSON.stringify(newUserData));
+      sessionStorage.setItem('user', JSON.stringify(newUserData));
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
       throw error;
@@ -147,7 +151,7 @@ export const AuthProvider = ({ children }) => {
         if (error.response?.status === 401 && token) {
           // Token expiré ou invalide
           console.log('Token expiré, déconnexion automatique');
-          logout();
+          logout(false);
         }
         return Promise.reject(error);
       }

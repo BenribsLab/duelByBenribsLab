@@ -1,4 +1,8 @@
 const { prisma } = require('../database');
+const {
+  PUBLIC_DUELLISTE_SELECT,
+  SELF_DUELLISTE_SELECT
+} = require('../utils/safeData');
 // const { calculateClassement } = require('../services/classementService'); // TODO: utiliser ou supprimer
 
 /**
@@ -34,7 +38,8 @@ async function getAllDuellistes(req, res) {
           { nbVictoires: 'desc' },
           { pseudo: 'asc' }
         ],
-        include: {
+        select: {
+          ...PUBLIC_DUELLISTE_SELECT,
           _count: {
             select: {
               duelsProvoques: true,
@@ -72,9 +77,12 @@ async function getDuelisteById(req, res) {
   try {
     const { id } = req.params;
     
+    const requestedId = parseInt(id);
+    const isOwnProfile = req.user.id === requestedId;
     const dueliste = await prisma.dueliste.findUnique({
-      where: { id: parseInt(id) },
-      include: {
+      where: { id: requestedId },
+      select: {
+        ...(isOwnProfile ? SELF_DUELLISTE_SELECT : PUBLIC_DUELLISTE_SELECT),
         duelsProvoques: {
           include: {
             adversaire: { select: { id: true, pseudo: true } },
@@ -94,9 +102,6 @@ async function getDuelisteById(req, res) {
       }
     });
 
-    // ✅ S'assurer que derniereConsultationNotifications est inclus
-    console.log('🔍 getDuelisteById - derniereConsultationNotifications:', dueliste?.derniereConsultationNotifications);
-    
     if (!dueliste) {
       return res.status(404).json({
         success: false,
@@ -130,51 +135,19 @@ async function getDuelisteById(req, res) {
 }
 
 /**
- * Créer un nouveau dueliste
- */
-async function createDueliste(req, res) {
-  try {
-    const { pseudo, avatarUrl, categorie } = req.body;
-    
-    // Vérifier que le pseudo n'existe pas déjà
-    const existant = await prisma.dueliste.findUnique({
-      where: { pseudo }
-    });
-    
-    if (existant) {
-      return res.status(400).json({
-        success: false,
-        error: 'Ce pseudo est déjà utilisé'
-      });
-    }
-
-    const nouveauDueliste = await prisma.dueliste.create({
-      data: {
-        pseudo,
-        avatarUrl: avatarUrl || null,
-        categorie: categorie || 'SENIOR' // Par défaut SENIOR, peut être JUNIOR
-      }
-    });    res.status(201).json({
-      success: true,
-      data: nouveauDueliste,
-      message: 'Dueliste créé avec succès'
-    });
-  } catch (error) {
-    console.error('Erreur createDueliste:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la création du dueliste'
-    });
-  }
-}
-
-/**
  * Mettre à jour un dueliste
  */
 async function updateDueliste(req, res) {
   try {
     const { id } = req.params;
-    const { pseudo, avatarUrl, statut, categorie } = req.body;
+    const { pseudo, avatarUrl, categorie } = req.body;
+
+    if (req.user.id !== parseInt(id)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Vous ne pouvez modifier que votre propre profil'
+      });
+    }
     
     // Vérifier que le dueliste existe
     const existant = await prisma.dueliste.findUnique({
@@ -205,12 +178,12 @@ async function updateDueliste(req, res) {
     const updateData = {};
     if (pseudo) updateData.pseudo = pseudo;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
-    if (statut) updateData.statut = statut.toUpperCase();
     if (categorie) updateData.categorie = categorie.toUpperCase();
     
     const duelisteModifie = await prisma.dueliste.update({
       where: { id: parseInt(id) },
-      data: updateData
+      data: updateData,
+      select: SELF_DUELLISTE_SELECT
     });
     
     res.json({
@@ -233,6 +206,13 @@ async function updateDueliste(req, res) {
 async function deleteDueliste(req, res) {
   try {
     const { id } = req.params;
+
+    if (req.user.id !== parseInt(id)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Vous ne pouvez supprimer que votre propre compte'
+      });
+    }
     
     // Vérifier que le dueliste existe
     const existant = await prisma.dueliste.findUnique({
@@ -339,7 +319,6 @@ async function markNotificationsAsRead(req, res) {
 module.exports = {
   getAllDuellistes,
   getDuelisteById,
-  createDueliste,
   updateDueliste,
   deleteDueliste,
   markNotificationsAsRead

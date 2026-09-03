@@ -1,6 +1,8 @@
 const { prisma } = require('../database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const authService = require('./authService');
+const emailService = require('./emailService');
 
 /**
  * Service d'administration pour la gestion des utilisateurs
@@ -27,8 +29,7 @@ class AdminService {
    * Générer un code OTP
    */
   generateOTP() {
-    const length = parseInt(process.env.OTP_LENGTH) || 6;
-    return crypto.randomInt(100000, 999999).toString().padStart(length, '0');
+    return crypto.randomInt(0, 1000000).toString().padStart(6, '0');
   }
 
   /**
@@ -169,6 +170,10 @@ class AdminService {
         dataToUpdate.passwordHash = await bcrypt.hash(password, 12);
         // Si on définit un mot de passe, basculer en mode PASSWORD
         dataToUpdate.authMode = 'PASSWORD';
+        dataToUpdate.otpCode = null;
+        dataToUpdate.otpExpiry = null;
+        dataToUpdate.otpAttempts = 0;
+        dataToUpdate.tokenVersion = { increment: 1 };
       }
 
       if (authMode && authMode !== existingUser.authMode) {
@@ -341,11 +346,14 @@ class AdminService {
       }
 
       // Générer un OTP si mode OTP
+      let otpCode = null;
       if (authMode === 'OTP') {
-        const otpCode = this.generateOTP();
+        otpCode = this.generateOTP();
         const otpExpiry = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000);
-        userData_creation.otpCode = otpCode;
+        userData_creation.otpCode = authService.hashOTP(otpCode);
         userData_creation.otpExpiry = otpExpiry;
+        userData_creation.otpAttempts = 0;
+        userData_creation.otpLastSentAt = new Date();
       }
 
       // Créer l'utilisateur
@@ -361,6 +369,18 @@ class AdminService {
           updatedAt: true
         }
       });
+
+      if (otpCode) {
+        try {
+          await emailService.sendOTPEmail(normalizedEmail, otpCode, pseudo);
+        } catch (error) {
+          await prisma.dueliste.update({
+            where: { id: user.id },
+            data: { otpCode: null, otpExpiry: null, otpLastSentAt: null }
+          });
+          throw error;
+        }
+      }
 
       return user;
     } catch (error) {

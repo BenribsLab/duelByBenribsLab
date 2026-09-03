@@ -3,6 +3,7 @@ import api from './api';
 class AdminAuthService {
   constructor() {
     this.TOKEN_KEY = 'admin_auth_token';
+    this.token = null;
   }
 
   /**
@@ -98,21 +99,21 @@ class AdminAuthService {
    * Obtenir le token depuis le localStorage
    */
   getToken() {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return this.token;
   }
 
   /**
    * Sauvegarder le token dans le localStorage
    */
   setToken(token) {
-    localStorage.setItem(this.TOKEN_KEY, token);
+    this.token = token;
   }
 
   /**
    * Supprimer le token du localStorage
    */
   removeToken() {
-    localStorage.removeItem(this.TOKEN_KEY);
+    this.token = null;
   }
 
   /**

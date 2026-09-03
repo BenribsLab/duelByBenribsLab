@@ -129,7 +129,6 @@ class AdminController {
    */
   async createUser(req, res) {
     try {
-      console.log('Données reçues pour création utilisateur:', req.body);
       const { pseudo, email, password, authMode, autoValidate } = req.body;
 
       const newUser = await adminService.createUserByAdmin({

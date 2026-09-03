@@ -33,7 +33,7 @@ router.get('/search', [
   query('q')
     .notEmpty()
     .trim()
-    .isLength({ min: 1 })
+    .isLength({ min: 1, max: 100 })
     .withMessage('Terme de recherche requis'),
   
   query('page')
@@ -73,12 +73,12 @@ router.post('/users', [
     .optional()
     .custom((value, { req }) => {
       // Si mode PASSWORD, le mot de passe est requis
-      if (req.body.authMode === 'PASSWORD' && (!value || value.length < 6)) {
-        throw new Error('Le mot de passe doit contenir au moins 6 caractères en mode PASSWORD');
+      if (req.body.authMode === 'PASSWORD' && (!value || value.length < 10)) {
+        throw new Error('Le mot de passe doit contenir au moins 10 caractères en mode PASSWORD');
       }
       // Si mot de passe fourni, il doit être valide
-      if (value && value.length < 6) {
-        throw new Error('Le mot de passe doit contenir au moins 6 caractères');
+      if (value && (value.length > 72 || Buffer.byteLength(value, 'utf8') > 72)) {
+        throw new Error('Le mot de passe ne peut pas dépasser 72 octets');
       }
       return true;
     }),
@@ -128,8 +128,9 @@ router.put('/users/:id', [
   
   body('password')
     .optional()
-    .isLength({ min: 6 })
-    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+    .isLength({ min: 10, max: 72 })
+    .custom((value) => Buffer.byteLength(value, 'utf8') <= 72)
+    .withMessage('Le mot de passe doit contenir entre 10 et 72 octets'),
   
   body('authMode')
     .optional()
@@ -151,7 +152,7 @@ router.delete('/users/:id', [
 // DELETE /api/admin/users - Supprimer plusieurs utilisateurs
 router.delete('/users', [
   body('userIds')
-    .isArray({ min: 1 })
+    .isArray({ min: 1, max: 100 })
     .withMessage('Liste d\'IDs utilisateurs requise'),
   
   body('userIds.*')

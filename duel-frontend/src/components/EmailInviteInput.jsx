@@ -45,7 +45,7 @@ const EmailInviteInput = ({ onInvite, placeholder = "email@exemple.com" }) => {
     setErrorMessage('');
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${config.API_BASE_URL}/invitations/email`, {
         method: 'POST',
         headers: {
