@@ -1,14 +1,24 @@
 apply plugin: 'com.android.application'
 
+// Signature de release : lue depuis keystore.properties (jamais versionne, voir
+// .gitignore). Absent -> pas de config de signature, seul un build debug reste
+// possible ; c'est volontaire pour ne jamais exiger ce fichier hors publication.
+def keystorePropertiesFile = rootProject.file('app/keystore.properties')
+def keystoreProperties = new Properties()
+def hasSigningConfig = keystorePropertiesFile.exists()
+if (hasSigningConfig) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace "com.benribslab.duel"
+    namespace "fr.benribs.duel"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.benribslab.duel"
+        applicationId "fr.benribs.duel"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +26,23 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (hasSigningConfig) {
+        signingConfigs {
+            release {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasSigningConfig) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     

@@ -1,5 +1,5 @@
 {
-  "appId": "com.benribslab.duel",
+  "appId": "fr.benribs.duel",
   "appName": "Duel App",
   "webDir": "dist",
   "plugins": {

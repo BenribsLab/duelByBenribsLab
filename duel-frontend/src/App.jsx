@@ -14,6 +14,7 @@ import Parametres from './pages/Parametres';
 import AdminLogin from './components/AdminLogin';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Confidentialite from './pages/Confidentialite';
 import './App.css'
 
 function App() {
@@ -28,7 +29,8 @@ function App() {
           {/* Routes publiques d'authentification */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+          <Route path="/confidentialite" element={<Confidentialite />} />
+
           {/* Route d'administration (connexion) */}
           <Route path="/admin" element={<AdminLogin />} />
           

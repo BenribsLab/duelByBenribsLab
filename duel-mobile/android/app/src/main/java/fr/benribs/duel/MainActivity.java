@@ -1,4 +1,4 @@
-package com.benribslab.duel;
+package fr.benribs.duel;
 
 import com.getcapacitor.BridgeActivity;
 
