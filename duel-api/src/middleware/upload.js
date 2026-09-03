@@ -15,7 +15,10 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024,
     files: 1,
     fields: 0,
-    parts: 1
+    // `files` et `fields` bornent déjà exactement ce qui est autorisé (un
+    // fichier, aucun champ). `parts: 1` était redondant et cassait tout envoi
+    // légitime : busboy compte 2 parts pour un seul fichier (off-by-one).
+    parts: 2
   }
 });
 
