@@ -29,6 +29,13 @@ services:
       TRACKING_SECRET: "${TRACKING_SECRET:?TRACKING_SECRET requis}"
       FRONTEND_URL: "${FRONTEND_URL:-https://duel.benribs.fr}"
       API_URL: "${API_URL:-https://api-duel.benribs.fr}"
+      # Envoi d'e-mails via Microsoft Graph (OTP, invitations, bienvenue).
+      # Sans ces valeurs, l'API demarre mais tout envoi echoue en 503.
+      AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
+      AZURE_CLIENT_SECRET: "${AZURE_CLIENT_SECRET:-}"
+      AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
+      GRAPH_SENDER_EMAIL: "${GRAPH_SENDER_EMAIL:-}"
+      GRAPH_SENDER_NAME: "${GRAPH_SENDER_NAME:-Duel By Benribs Lab}"
       # Origines CORS. Les deux entrees Capacitor sont indispensables a
       # l application mobile ; les origines localhost servent au developpement
       # et peuvent etre retirees en production.
