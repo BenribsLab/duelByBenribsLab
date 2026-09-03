@@ -15,6 +15,7 @@ import AdminLogin from './components/AdminLogin';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Confidentialite from './pages/Confidentialite';
+import SuppressionCompte from './pages/SuppressionCompte';
 import './App.css'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/confidentialite" element={<Confidentialite />} />
+          <Route path="/suppression-compte" element={<SuppressionCompte />} />
 
           {/* Route d'administration (connexion) */}
           <Route path="/admin" element={<AdminLogin />} />

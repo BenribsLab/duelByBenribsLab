@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings, User, Save, AlertCircle, CheckCircle, Upload, X, LogOut, Trash2 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { duellistesService, uploadService } from '../services/api';
 import useBackButton from '../hooks/useBackButton';
@@ -7,6 +8,27 @@ import Avatar from '../components/Avatar';
 
 const Parametres = () => {
   const { user, updateUser, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await duellistesService.delete(user.id);
+      await logout(); // le compte n'existe plus ; l'appel /auth/logout echoue silencieusement, sans consequence
+      navigate('/login');
+    } catch (error) {
+      setDeleteError(
+        error.response?.data?.error ||
+        'Suppression impossible pour le moment. Si vous avez un duel en cours, terminez-le ou annulez-le d\'abord.'
+      );
+      setDeleting(false);
+    }
+  };
   const [formData, setFormData] = useState({
     pseudo: '',
     categorie: 'SENIOR',
@@ -384,6 +406,55 @@ const Parametres = () => {
             <LogOut className="h-4 w-4 mr-2" />
             Se déconnecter
           </button>
+        </div>
+      </div>
+
+      {/* Suppression du compte */}
+      <div className="mt-6 bg-red-50 border border-red-300 rounded-lg p-4">
+        <div className="flex items-start">
+          <Trash2 className="h-5 w-5 text-red-700 mr-2 mt-0.5 flex-shrink-0" />
+          <div className="text-sm flex-1">
+            <p className="font-medium text-red-900 mb-1">Supprimer mon compte</p>
+            <p className="text-red-800 mb-3">
+              Action définitive : votre profil, vos statistiques et l'historique de vos duels
+              (y compris ceux joués contre d'autres membres) seront supprimés. Impossible si un
+              duel est en cours — annulez-le ou terminez-le d'abord.
+            </p>
+
+            {deleteError && (
+              <p className="text-red-700 bg-red-100 rounded px-3 py-2 mb-3">{deleteError}</p>
+            )}
+
+            {!deleteConfirm ? (
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(true)}
+                className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md"
+              >
+                Supprimer mon compte
+              </button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-red-900 font-medium">Confirmer ?</span>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md disabled:opacity-50"
+                >
+                  {deleting ? 'Suppression...' : 'Oui, supprimer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md"
+                >
+                  Annuler
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

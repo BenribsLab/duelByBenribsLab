@@ -70,9 +70,13 @@ const Confidentialite = () => {
             <h2 className="text-xl font-semibold text-gray-900">Conservation</h2>
             <p className="text-gray-700">
               Les données sont conservées tant que votre compte existe. La suppression de votre
-              compte entraîne la suppression de votre profil et de vos jetons de notification ;
-              l'historique des duels auxquels vous avez participé peut être conservé sous une
-              forme anonymisée pour préserver l'intégrité du classement des autres membres.
+              compte est définitive et immédiate : profil, jetons de notification et intégralité
+              de vos duels (y compris ceux joués contre d'autres membres) sont supprimés, sans
+              période de rétention. Détails et marche à suivre sur la page{' '}
+              <Link to="/suppression-compte" className="text-purple-600 hover:text-purple-700 font-medium">
+                Suppression de compte
+              </Link>
+              .
             </p>
           </section>
 
