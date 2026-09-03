@@ -209,8 +209,22 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
-  const markAsRead = (notificationId) => {
+  // Le systeme ne suit qu'une seule date globale de derniere consultation (pas
+  // d'etat lu/non lu par notification). Retirer une notification seulement de
+  // l'affichage local ne suffit donc pas : au prochain sondage (30s), elle est
+  // recalculee depuis cette meme date jamais avancee, et reapparait. On
+  // persiste donc systematiquement cote serveur, ce qui a pour consequence que
+  // dismisser une seule notification marque en realite toutes les notifications
+  // courantes comme lues (comportement equivalent a "Tout marquer lu").
+  const markAsRead = async (notificationId) => {
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    if (!user?.id) return;
+    try {
+      await duellistesService.markNotificationsAsRead(user.id);
+      await refreshUser();
+    } catch (error) {
+      console.error('Erreur lors du marquage de la notification comme lue:', error);
+    }
   };
 
   const markAllAsRead = () => {
