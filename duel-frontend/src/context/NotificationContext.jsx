@@ -41,7 +41,7 @@ export const NotificationProvider = ({ children }) => {
 
       // On prend tous les duels récents (sans filtrage par cutoffDate encore)
       const duelsRecents = duels.filter((duel) => {
-        const dateCreation = new Date(duel.dateCreation);
+        const dateCreation = new Date(duel.dateProposition);
         const dateAcceptation = duel.dateAcceptation ? new Date(duel.dateAcceptation) : null;
         const dateValidation = duel.dateValidation ? new Date(duel.dateValidation) : null;
         const now = new Date();
@@ -71,7 +71,7 @@ export const NotificationProvider = ({ children }) => {
           message: `${duel.provocateur.pseudo} vous a défié !`,
           link: '/app/duels?tab=invitations-recues',
           data: duel,
-          timestamp: new Date(duel.dateCreation),
+          timestamp: new Date(duel.dateProposition),
         });
       });
 
