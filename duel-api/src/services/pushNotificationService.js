@@ -1,4 +1,7 @@
 const admin = require('firebase-admin');
+// firebase-admin v12+ a retire `admin.messaging()` : l'API vit desormais dans
+// le sous-module `firebase-admin/messaging` (meme restructuration que `credential.cert`).
+const { getMessaging } = require('firebase-admin/messaging');
 
 class PushNotificationService {
   constructor() {
@@ -86,7 +89,7 @@ class PushNotificationService {
         }
       };
 
-      const response = await admin.messaging().send(message);
+      const response = await getMessaging().send(message);
       console.log('✅ Notification envoyée:', response);
       return response;
 
@@ -139,7 +142,7 @@ class PushNotificationService {
         }
       };
 
-      const response = await admin.messaging().sendEachForMulticast(message);
+      const response = await getMessaging().sendEachForMulticast(message);
       console.log(`✅ Notifications envoyées: ${response.successCount}/${tokens.length}`);
       
       // Gérer les tokens invalides
